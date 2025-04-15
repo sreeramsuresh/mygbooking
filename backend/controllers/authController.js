@@ -1,6 +1,7 @@
 // backend/controllers/authController.js
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { Op } = require("sequelize");
 const { User } = require("../models");
 const config = require("../config/server");
 
@@ -33,7 +34,7 @@ const login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign({ id: user.id, role: user.role }, config.jwtSecret, {
-      expiresIn: "24h",
+      expiresIn: config.jwtExpiry,
     });
 
     // Send response without password
@@ -66,7 +67,7 @@ const register = async (req, res) => {
     const { username, email, password, first_name, last_name, role } = req.body;
 
     // Check if user is admin (middleware should handle this, but double check)
-    if (req.user.role !== "admin") {
+    if (req.user && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only admins can register new users",
@@ -118,6 +119,13 @@ const register = async (req, res) => {
 const validateToken = async (req, res) => {
   try {
     // User data is attached by auth middleware
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+
     const userWithoutPassword = {
       id: req.user.id,
       username: req.user.username,

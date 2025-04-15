@@ -1,9 +1,9 @@
-// backend/models/Booking.js
+// backend/models/WFHRequest.js
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-  const Booking = sequelize.define(
-    "Booking",
+  const WFHRequest = sequelize.define(
+    "WFHRequest",
     {
       id: {
         type: DataTypes.INTEGER,
@@ -18,40 +18,32 @@ module.exports = (sequelize) => {
           key: "id",
         },
       },
-      seat_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: "seats",
-          key: "id",
-        },
-      },
-      booking_date: {
+      start_date: {
         type: DataTypes.DATEONLY,
         allowNull: false,
       },
-      week_number: {
-        type: DataTypes.INTEGER,
+      end_date: {
+        type: DataTypes.DATEONLY,
         allowNull: false,
       },
-      year: {
-        type: DataTypes.INTEGER,
+      reason: {
+        type: DataTypes.TEXT,
         allowNull: false,
       },
       status: {
         type: DataTypes.STRING(20),
-        defaultValue: "booked",
+        defaultValue: "pending",
         validate: {
-          isIn: [["booked", "checked_in", "missed", "cancelled"]],
+          isIn: [["pending", "approved", "rejected"]],
         },
       },
-      checked_in_at: {
-        type: DataTypes.DATE,
+      approved_by: {
+        type: DataTypes.INTEGER,
         allowNull: true,
-      },
-      ip_address: {
-        type: DataTypes.STRING(15),
-        allowNull: true,
+        references: {
+          model: "users",
+          key: "id",
+        },
       },
       created_at: {
         type: DataTypes.DATE,
@@ -63,16 +55,10 @@ module.exports = (sequelize) => {
       },
     },
     {
-      tableName: "bookings",
+      tableName: "wfh_requests",
       timestamps: false,
-      indexes: [
-        {
-          unique: true,
-          fields: ["seat_id", "booking_date"],
-        },
-      ],
     }
   );
 
-  return Booking;
+  return WFHRequest;
 };

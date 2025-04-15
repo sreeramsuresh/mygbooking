@@ -1,9 +1,9 @@
-// backend/models/Booking.js
+// backend/models/Compliance.js
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-  const Booking = sequelize.define(
-    "Booking",
+  const Compliance = sequelize.define(
+    "Compliance",
     {
       id: {
         type: DataTypes.INTEGER,
@@ -18,18 +18,6 @@ module.exports = (sequelize) => {
           key: "id",
         },
       },
-      seat_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: "seats",
-          key: "id",
-        },
-      },
-      booking_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-      },
       week_number: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -38,19 +26,23 @@ module.exports = (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      required_days: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      actual_days: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
       status: {
         type: DataTypes.STRING(20),
-        defaultValue: "booked",
+        defaultValue: "pending",
         validate: {
-          isIn: [["booked", "checked_in", "missed", "cancelled"]],
+          isIn: [["compliant", "non_compliant", "excused"]],
         },
       },
-      checked_in_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
-      ip_address: {
-        type: DataTypes.STRING(15),
+      manager_notes: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
       created_at: {
@@ -63,16 +55,16 @@ module.exports = (sequelize) => {
       },
     },
     {
-      tableName: "bookings",
+      tableName: "compliance",
       timestamps: false,
       indexes: [
         {
           unique: true,
-          fields: ["seat_id", "booking_date"],
+          fields: ["user_id", "week_number", "year"],
         },
       ],
     }
   );
 
-  return Booking;
+  return Compliance;
 };
