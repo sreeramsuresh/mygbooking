@@ -1,6 +1,6 @@
 // frontend/src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
-import authService from "../services/authService";
+import * as authService from "../services/authService";
 
 // Create the auth context
 export const AuthContext = createContext();
@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         const response = await authService.validateToken();
-        setUser(response.data.user);
+        setUser(response.user);
       } catch (err) {
         console.error("Auth validation error:", err);
         localStorage.removeItem("token");
@@ -36,22 +36,37 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (credentials) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await authService.login(credentials);
-      localStorage.setItem("token", response.data.token);
-      setUser(response.data.user);
+      const response = await authService.login(email, password, rememberMe);
+      setUser(response.user);
 
-      return { success: true };
+      // The token is already set in localStorage by the authService
+      return response.user;
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-      return {
-        success: false,
-        error: err.response?.data?.message || "Login failed",
-      };
+      const errorMessage = err.response?.data?.message || "Login failed";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Register function
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await authService.register(userData);
+      return response;
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Registration failed";
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -59,7 +74,7 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem("token");
+    authService.logout();
     setUser(null);
   };
 
@@ -70,6 +85,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
+    register,
     isAuthenticated: !!user,
   };
 
