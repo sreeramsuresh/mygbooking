@@ -39,6 +39,15 @@ module.exports = (sequelize) => {
           isIn: [["admin", "manager", "employee"]],
         },
       },
+      department: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      employee_id: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        unique: true,
+      },
       created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,

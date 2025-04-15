@@ -4,12 +4,12 @@
 
 // Validate login request
 const validateLoginRequest = (req, res, next) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password) {
+  if (!email || !password) {
     return res.status(400).json({
       success: false,
-      message: "Username and password are required",
+      message: "Email and password are required",
     });
   }
 
@@ -18,30 +18,56 @@ const validateLoginRequest = (req, res, next) => {
 
 // Validate registration request
 const validateRegisterRequest = (req, res, next) => {
-  const { username, email, password, first_name, last_name } = req.body;
+  // Check which registration route is being used
+  if (req.path === '/admin/register') {
+    // Admin registration
+    const { username, email, password, first_name, last_name } = req.body;
 
-  if (!username || !email || !password || !first_name || !last_name) {
-    return res.status(400).json({
-      success: false,
-      message: "All fields are required",
-    });
-  }
+    if (!username || !email || !password || !first_name || !last_name) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required for admin registration",
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+  } 
+  else {
+    // Public registration
+    const { firstName, lastName, email, password, department, employeeId } = req.body;
+    
+    console.log("Public registration request:", { firstName, lastName, email, password: password ? "***" : undefined, department, employeeId });
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid email format",
-    });
-  }
-
-  // Validate password strength
-  if (password.length < 6) {
-    return res.status(400).json({
-      success: false,
-      message: "Password must be at least 6 characters long",
-    });
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+    
+    // Validate password strength
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
   }
 
   next();

@@ -1,17 +1,46 @@
 // frontend/src/services/authService.js
 import api from "./api";
+import axios from "axios";
+
+// Standalone auth server URL
+const AUTH_SERVER_URL = "http://localhost:5005/api";
 
 // Login user
 export const login = async (email, password, rememberMe = false) => {
   try {
-    const response = await api.post("/auth/login", { email, password, rememberMe });
+    console.log("Attempting login with new Auth server first");
     
-    // Store token in localStorage if successful
-    if (response.data && response.data.token) {
-      localStorage.setItem("token", response.data.token);
+    // Try the standalone auth server first
+    try {
+      const response = await axios.post(`${AUTH_SERVER_URL}/auth/login`, { 
+        email, 
+        password, 
+        rememberMe 
+      });
+      
+      console.log("Login successful with standalone auth server");
+      
+      // Store token in localStorage if successful
+      if (response.data && response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("Login with standalone auth server failed:", error.message);
+      console.error("Error details:", error.response?.data);
+      
+      // Fall back to original API
+      console.log("Falling back to original API for login");
+      const response = await api.post("/auth/login", { email, password, rememberMe });
+      
+      // Store token in localStorage if successful
+      if (response.data && response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+      
+      return response.data;
     }
-    
-    return response.data;
   } catch (error) {
     console.error("Login error:", error);
     throw error;
@@ -21,8 +50,26 @@ export const login = async (email, password, rememberMe = false) => {
 // Register new user
 export const register = async (userData) => {
   try {
-    const response = await api.post("/auth/register", userData);
-    return response.data;
+    console.log("Trying direct axios registration");
+    
+    // Try direct axios request first (bypassing our API service)
+    try {
+      const directResponse = await axios.post("http://localhost:5000/api/auth/signup", userData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log("Direct registration succeeded:", directResponse.data);
+      return directResponse.data;
+    } catch (directError) {
+      console.error("Direct registration failed:", directError.message);
+      console.error("Direct error details:", directError.response?.data);
+      
+      // If direct request fails, try using our API service
+      console.log("Falling back to api service...");
+      const response = await api.post("/auth/signup", userData);
+      return response.data;
+    }
   } catch (error) {
     console.error("Registration error:", error);
     throw error;
@@ -32,8 +79,25 @@ export const register = async (userData) => {
 // Validate JWT token
 export const validateToken = async () => {
   try {
-    const response = await api.get("/auth/validate");
-    return response.data;
+    // Try standalone auth server first
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${AUTH_SERVER_URL}/auth/validate`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("Token validation successful with standalone auth server");
+      return response.data;
+    } catch (error) {
+      console.error("Token validation with standalone auth server failed:", error.message);
+      
+      // Fall back to original API
+      console.log("Falling back to original API for token validation");
+      const response = await api.get("/auth/validate");
+      return response.data;
+    }
   } catch (error) {
     console.error("Token validation error:", error);
     throw error;

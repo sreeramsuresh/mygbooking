@@ -8,11 +8,11 @@ const config = require("../config/server");
 // Login user
 const login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     // Check if user exists
     const user = await User.findOne({
-      where: { username },
+      where: { email },
     });
 
     if (!user) {
@@ -148,8 +148,84 @@ const validateToken = async (req, res) => {
   }
 };
 
+// Public register function (no auth required)
+const registerPublic = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, department, employeeId } = req.body;
+    
+    console.log("Received registration request:", { 
+      firstName, 
+      lastName, 
+      email, 
+      password: password ? '***' : undefined, 
+      department, 
+      employeeId 
+    });
+
+    // Check if email already exists
+    const existingUser = await User.findOne({
+      where: {
+        email
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create username from email (before the @ symbol)
+    let username = email.split('@')[0];
+
+    // Check if the username already exists, append random digits if needed
+    const existingUsername = await User.findOne({
+      where: {
+        username
+      }
+    });
+
+    if (existingUsername) {
+      username = `${username}${Math.floor(Math.random() * 10000)}`;
+    }
+
+    // Create user with optional fields
+    const userData = {
+      username,
+      email,
+      password: hashedPassword,
+      first_name: firstName,
+      last_name: lastName,
+      role: "employee", // Default to employee for public registration
+    };
+    
+    // Add optional fields if provided
+    if (department) userData.department = department;
+    if (employeeId) userData.employee_id = employeeId;
+    
+    const newUser = await User.create(userData);
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+    });
+  } catch (error) {
+    console.error("Public registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error during registration: " + error.message,
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
+  registerPublic,
   validateToken,
 };

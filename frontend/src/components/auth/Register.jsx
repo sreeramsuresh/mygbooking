@@ -11,7 +11,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import * as authService from '../../services/authService';
+import { registerUser } from '../../services/registerService';
 
 const Register = ({ setActiveTab, setMessage }) => {
   const [formData, setFormData] = useState({
@@ -104,7 +104,17 @@ const Register = ({ setActiveTab, setMessage }) => {
     setError(null);
 
     try {
-      await authService.register({
+      console.log('Submitting registration with data:', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: '********', // Don't log the actual password
+        department: formData.department,
+        employeeId: formData.employeeId
+      });
+      
+      // Using the dedicated registration service
+      await registerUser({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -116,7 +126,12 @@ const Register = ({ setActiveTab, setMessage }) => {
       setMessage('Registration successful! Please login with your credentials.');
       setActiveTab(0); // Switch to login tab
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error details:', err);
+      // Provide more detailed error message if available
+      const errorMessage = err.response?.data?.message || 
+                          (err.response?.status === 404 ? 'Registration endpoint not found. Please contact support.' : 
+                          'Registration failed. Please try again.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
