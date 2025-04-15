@@ -11,9 +11,8 @@ import {
 } from "@mui/material";
 import { CalendarMonth as CalendarIcon } from "@mui/icons-material";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { scheduleService, bookingService } from "../../services";
+import scheduleService from "../../services/scheduleService";
+import bookingService from "../../services/bookingService";
 import {
   startOfWeek,
   endOfWeek,
@@ -105,7 +104,6 @@ const BookingCalendar = ({ onDateSelect }) => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={{ p: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <CalendarIcon sx={{ mr: 1 }} color="primary" />
@@ -201,7 +199,6 @@ const BookingCalendar = ({ onDateSelect }) => {
           </Box>
         )}
       </Paper>
-    </LocalizationProvider>
   );
 };
 

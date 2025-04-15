@@ -24,7 +24,8 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon, Edit as EditIcon } from "@mui/icons-material";
-import { userService, scheduleService } from "../../services";
+import userService from "../../services/userService";
+import scheduleService from "../../services/scheduleService";
 
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 

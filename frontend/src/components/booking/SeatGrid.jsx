@@ -11,7 +11,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { bookingService } from "../../services";
+import bookingService from "../../services/bookingService";
 import SeatItem from "./SeatItem";
 
 const SeatGrid = ({ selectedDate, onBookingComplete }) => {

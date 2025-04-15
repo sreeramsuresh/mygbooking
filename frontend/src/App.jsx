@@ -31,7 +31,6 @@ import NotFound from "./pages/NotFound";
 
 // Protected Route Component
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import { useAuth } from "./hooks/useAuth";
 
 const App = () => {
   return (

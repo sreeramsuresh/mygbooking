@@ -19,8 +19,9 @@ import {
   Home as HomeIcon,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import { bookingService, scheduleService } from "../../services";
-import { useAuth } from "../../context/AuthContext";
+import bookingService from "../../services/bookingService";
+import scheduleService from "../../services/scheduleService";
+import { useAuth } from "../../hooks/useAuth";
 
 const EmployeeDashboard = () => {
   const { user } = useAuth();

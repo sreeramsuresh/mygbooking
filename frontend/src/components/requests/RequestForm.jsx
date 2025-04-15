@@ -10,9 +10,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { requestService } from "../../services";
+import requestService from "../../services/requestService";
 
 const RequestForm = () => {
   const [startDate, setStartDate] = useState(null);
@@ -60,7 +58,6 @@ const RequestForm = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Paper sx={{ p: 3, maxWidth: 600, mx: "auto" }}>
         <Typography variant="h5" gutterBottom>
           Work From Home Request
@@ -84,9 +81,9 @@ const RequestForm = () => {
               label="Start Date"
               value={startDate}
               onChange={setStartDate}
-              renderInput={(params) => (
-                <TextField {...params} fullWidth required />
-              )}
+              slotProps={{
+                textField: { fullWidth: true, required: true }
+              }}
               disablePast
             />
 
@@ -94,9 +91,9 @@ const RequestForm = () => {
               label="End Date"
               value={endDate}
               onChange={setEndDate}
-              renderInput={(params) => (
-                <TextField {...params} fullWidth required />
-              )}
+              slotProps={{
+                textField: { fullWidth: true, required: true }
+              }}
               disablePast
               minDate={startDate}
             />
@@ -124,7 +121,6 @@ const RequestForm = () => {
           </Button>
         </Box>
       </Paper>
-    </LocalizationProvider>
   );
 };
 

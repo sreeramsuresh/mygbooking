@@ -9,7 +9,8 @@ import {
 
 import AttendanceChart from "./AttendanceChart";
 import ComplianceTable from "./ComplianceTable";
-import { scheduleService, bookingService } from "../../services";
+import scheduleService from "../../services/scheduleService";
+import bookingService from "../../services/bookingService";
 
 const ManagerDashboard = () => {
   const [tabValue, setTabValue] = useState(0);

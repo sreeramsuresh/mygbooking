@@ -29,7 +29,7 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
-import { userService } from "../../services";
+import userService from "../../services/userService";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);

@@ -11,7 +11,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { register } from '../../services/authService';
+import * as authService from '../../services/authService';
 
 const Register = ({ setActiveTab, setMessage }) => {
   const [formData, setFormData] = useState({
@@ -104,7 +104,7 @@ const Register = ({ setActiveTab, setMessage }) => {
     setError(null);
 
     try {
-      await register({
+      await authService.register({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,

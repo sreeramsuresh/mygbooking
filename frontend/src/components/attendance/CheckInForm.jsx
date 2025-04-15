@@ -19,8 +19,9 @@ import {
   WifiOff as WifiOffIcon,
   LocationOn as LocationIcon,
 } from "@mui/icons-material";
-import { attendanceService, bookingService } from "../../services";
-import { useAuth } from "../../context/AuthContext";
+import bookingService from "../../services/bookingService";
+import attendanceService from "../../services/attendanceService";
+import { useAuth } from "../../hooks/useAuth";
 
 const CheckInForm = () => {
   const { user } = useAuth();
