@@ -1,112 +1,117 @@
-// frontend/src/services/requestService.js
-import axios from "axios";
-import { API_URL } from "../../config";
+// frontend/src/components/requests/RegularizationForm.jsx
+import React, { useState } from 'react';
+import { Grid, Typography, Paper, TextField, Button, Box, Alert } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import requestService from '../../services/requestService';
+import useAuth from '../../hooks/useAuth';
 
-const API_ENDPOINT = `${API_URL}/requests`;
+const RegularizationForm = () => {
+  const { user } = useAuth();
+  const [date, setDate] = useState(null);
+  const [reason, setReason] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-// Request interceptor to add auth token
-axios.interceptors.request.use(
-  (config) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user && user.accessToken) {
-      config.headers["Authorization"] = `Bearer ${user.accessToken}`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!date) {
+      setError('Please select a date');
+      return;
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
-const requestService = {
-  createRegularizationRequest: async (date, reason) => {
+    if (!reason.trim()) {
+      setError('Please provide a reason');
+      return;
+    }
+
     try {
-      const response = await axios.post(`${API_ENDPOINT}/regularization`, {
-        date,
-        reason,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
+      setLoading(true);
+      setError('');
+      
+      const response = await requestService.createRegularizationRequest(date, reason);
+      
+      if (response.success) {
+        setSuccess(true);
+        setDate(null);
+        setReason('');
+      } else {
+        setError(response.message || 'Failed to submit the request');
       }
-      throw error;
+    } catch (err) {
+      setError('An error occurred while submitting the request');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  },
+  };
 
-  createWFHRequest: async (date, reason) => {
-    try {
-      const response = await axios.post(`${API_ENDPOINT}/wfh`, {
-        date,
-        reason,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  getMyRequests: async (filters = {}) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINT}/my`, {
-        params: filters,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  getPendingRequests: async (filters = {}) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINT}/pending`, {
-        params: filters,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  approveRequest: async (requestId, responseMessage = "") => {
-    try {
-      const response = await axios.post(
-        `${API_ENDPOINT}/${requestId}/approve`,
-        {
-          responseMessage,
-        }
-      );
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  rejectRequest: async (requestId, responseMessage) => {
-    try {
-      const response = await axios.post(`${API_ENDPOINT}/${requestId}/reject`, {
-        responseMessage,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
+  return (
+    <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 3 }}>
+      <Typography variant="h5" component="h1" gutterBottom>
+        Regularization Request
+      </Typography>
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Your regularization request has been submitted successfully!
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <DatePicker 
+              label="Date for Regularization"
+              value={date}
+              onChange={(newDate) => {
+                setDate(newDate);
+                setSuccess(false);
+              }}
+              renderInput={(params) => <TextField {...params} required fullWidth />}
+              disableFuture
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              required
+              fullWidth
+              id="reason"
+              label="Reason for Regularization"
+              name="reason"
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                setSuccess(false);
+              }}
+              multiline
+              rows={4}
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              disabled={loading}
+            >
+              {loading ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
+    </Paper>
+  );
 };
 
-export default requestService;
+export default RegularizationForm;

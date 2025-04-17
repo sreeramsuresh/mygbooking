@@ -11,3 +11,32 @@
 2025-04-17T04:14:57.419Z info: Database initialization completed successfully.
 2025-04-17T04:14:57.427Z info: Scheduler initialized successfully
 2025-04-17T04:14:57.432Z info: Server is running on port 8080
+2025-04-17T09:29:35.247Z info: Checking database structure...
+2025-04-17T09:29:36.528Z error: Database initialization failed: SQLITE_ERROR: near "[1,2,3,4,5]": syntax error
+2025-04-17T09:31:14.817Z info: Checking database structure...
+2025-04-17T09:31:18.427Z info: Database synchronized successfully.
+2025-04-17T09:31:18.458Z info: Seeding roles...
+2025-04-17T09:31:19.307Z info: Roles seeded successfully.
+2025-04-17T09:31:19.386Z info: Creating admin user...
+2025-04-17T09:31:20.625Z info: Admin user created successfully.
+2025-04-17T09:31:20.727Z info: Creating initial seats...
+2025-04-17T09:31:25.338Z info: Initial seats created successfully.
+2025-04-17T09:31:25.339Z info: Database initialization completed successfully.
+2025-04-17T09:31:25.364Z info: Scheduler initialized successfully
+2025-04-17T09:31:25.404Z info: Server is running on port 8080
+2025-04-17T09:41:15.285Z info: Checking database structure...
+2025-04-17T09:41:16.981Z info: Database synchronized successfully.
+2025-04-17T09:41:17.000Z info: Roles already exist, skipping seed.
+2025-04-17T09:41:17.007Z info: Users already exist, skipping admin user creation.
+2025-04-17T09:41:17.012Z info: Seats already exist, skipping seat creation.
+2025-04-17T09:41:17.013Z info: Database initialization completed successfully.
+2025-04-17T09:41:17.029Z info: Scheduler initialized successfully
+2025-04-17T09:41:17.040Z info: Server is running on port 8080
+2025-04-17T09:59:26.140Z info: Checking database structure...
+2025-04-17T09:59:27.140Z info: Database synchronized successfully.
+2025-04-17T09:59:27.150Z info: Roles already exist, skipping seed.
+2025-04-17T09:59:27.155Z info: Users already exist, skipping admin user creation.
+2025-04-17T09:59:27.159Z info: Seats already exist, skipping seat creation.
+2025-04-17T09:59:27.160Z info: Database initialization completed successfully.
+2025-04-17T09:59:27.169Z info: Scheduler initialized successfully
+2025-04-17T09:59:27.174Z info: Server is running on port 8080

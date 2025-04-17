@@ -1,150 +1,108 @@
-// frontend/src/services/bookingService.js
-import axios from "axios";
-import { API_URL } from "../config";
+// frontend/src/hooks/useBookings.js
+import { useState, useCallback } from 'react';
+import bookingService from '../services/bookingService';
 
-const API_ENDPOINT = `${API_URL}/bookings`;
+const useBookings = () => {
+  const [myBookings, setMyBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-// Request interceptor to add auth token
-axios.interceptors.request.use(
-  (config) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user && user.accessToken) {
-      config.headers["Authorization"] = `Bearer ${user.accessToken}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-const bookingService = {
-  createBooking: async (seatId, bookingDate) => {
+  const fetchMyBookings = useCallback(async (filters = {}) => {
     try {
-      const response = await axios.post(API_ENDPOINT, {
-        seatId,
-        bookingDate,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
+      setLoading(true);
+      setError(null);
+      
+      const response = await bookingService.getMyBookings(filters);
+      
+      if (response.success) {
+        setMyBookings(response.data || []);
+      } else {
+        setError(response.message || 'Failed to load bookings');
       }
-      throw error;
+    } catch (err) {
+      setError('An error occurred while fetching bookings');
+      console.error('Error fetching bookings:', err);
+    } finally {
+      setLoading(false);
     }
-  },
+  }, []);
 
-  getMyBookings: async (filters = {}) => {
+  const cancelBooking = useCallback(async (bookingId, reason) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/my`, {
-        params: filters,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
+      const response = await bookingService.cancelBooking(bookingId, reason);
+      return response;
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
+      return { 
+        success: false, 
+        message: 'An error occurred while cancelling the booking' 
+      };
     }
-  },
+  }, []);
 
-  getAvailableSeats: async (date) => {
+  const createBooking = useCallback(async (seatId, bookingDate) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/available-seats`, {
-        params: { date },
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
+      const response = await bookingService.createBooking(seatId, bookingDate);
+      return response;
+    } catch (err) {
+      console.error('Error creating booking:', err);
+      return { 
+        success: false, 
+        message: 'An error occurred while creating the booking' 
+      };
     }
-  },
+  }, []);
 
-  getWeeklyStatus: async (year, weekNumber) => {
+  const getAvailableSeats = useCallback(async (date) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/my-weekly-status`, {
-        params: { year, weekNumber },
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
+      const response = await bookingService.getAvailableSeats(date);
+      return response;
+    } catch (err) {
+      console.error('Error fetching available seats:', err);
+      return { 
+        success: false, 
+        message: 'An error occurred while fetching available seats' 
+      };
     }
-  },
+  }, []);
 
-  cancelBooking: async (bookingId, reason) => {
+  const checkIn = useCallback(async (bookingId) => {
     try {
-      const response = await axios.delete(`${API_ENDPOINT}/${bookingId}`, {
-        data: { reason },
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
+      const response = await bookingService.checkIn(bookingId);
+      return response;
+    } catch (err) {
+      console.error('Error checking in:', err);
+      return { 
+        success: false, 
+        message: 'An error occurred while checking in' 
+      };
     }
-  },
+  }, []);
 
-  checkIn: async (bookingId) => {
+  const checkOut = useCallback(async (bookingId) => {
     try {
-      const response = await axios.post(
-        `${API_ENDPOINT}/${bookingId}/check-in`
-      );
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
+      const response = await bookingService.checkOut(bookingId);
+      return response;
+    } catch (err) {
+      console.error('Error checking out:', err);
+      return { 
+        success: false, 
+        message: 'An error occurred while checking out' 
+      };
     }
-  },
+  }, []);
 
-  checkOut: async (bookingId) => {
-    try {
-      const response = await axios.post(
-        `${API_ENDPOINT}/${bookingId}/check-out`
-      );
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  getBookingsByDate: async (date) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINT}/by-date`, {
-        params: { date },
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  createAutoBookings: async (weekStartDate) => {
-    try {
-      const response = await axios.post(`${API_ENDPOINT}/auto-bookings`, {
-        weekStartDate,
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
+  return {
+    myBookings,
+    loading,
+    error,
+    fetchMyBookings,
+    cancelBooking,
+    createBooking,
+    getAvailableSeats,
+    checkIn,
+    checkOut
+  };
 };
 
-export default bookingService;
+export default useBookings;

@@ -34,6 +34,14 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.BOOLEAN,
       defaultValue: true,
     },
+    managerId: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
     defaultWorkDays: {
       type: Sequelize.ARRAY(Sequelize.INTEGER), // Days of week (0-6, where 0 is Sunday)
       defaultValue: [1, 2, 3, 4, 5], // Default to weekdays

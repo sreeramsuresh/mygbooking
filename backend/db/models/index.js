@@ -5,13 +5,7 @@ const Sequelize = require("sequelize");
 const sequelize = new Sequelize(config.DB, config.USER, config.PASSWORD, {
   host: config.HOST,
   dialect: config.dialect,
-  operatorsAliases: false,
-  pool: {
-    max: config.pool.max,
-    min: config.pool.min,
-    acquire: config.pool.acquire,
-    idle: config.pool.idle,
-  },
+  pool: config.pool,
   logging: config.logging,
 });
 
@@ -38,6 +32,10 @@ db.user.belongsToMany(db.role, {
   foreignKey: "userId",
   otherKey: "roleId",
 });
+
+// Manager-Employee relationship (one-to-many, self-referencing)
+db.user.hasMany(db.user, { as: "subordinates", foreignKey: "managerId" });
+db.user.belongsTo(db.user, { as: "manager", foreignKey: "managerId" });
 
 // User-Booking relationship (one-to-many)
 db.user.hasMany(db.booking);
