@@ -261,23 +261,49 @@ const getAvailableSeats = async (date) => {
       },
     });
 
-    // Get booked seats for the date
-    const bookedSeats = await Booking.findAll({
+    // Get booked seats for the date with user information
+    const bookingsWithDetails = await Booking.findAll({
       where: {
         bookingDate: date,
         status: { [Op.ne]: "cancelled" },
       },
-      attributes: ["seatId"],
+      include: [
+        {
+          model: Seat,
+          attributes: ["id", "seatNumber", "description", "isActive"],
+        },
+        {
+          model: User,
+          attributes: ["id", "fullName", "department"],
+        },
+      ],
     });
 
-    const bookedSeatIds = bookedSeats.map((booking) => booking.seatId);
+    // Create a map of booked seat IDs
+    const bookedSeatIds = new Set(bookingsWithDetails.map((booking) => booking.seatId));
+    
+    // Format booked seats with user information
+    const bookedSeatsWithInfo = bookingsWithDetails.map((booking) => ({
+      id: booking.seat.id,
+      seatNumber: booking.seat.seatNumber,
+      description: booking.seat.description,
+      isActive: booking.seat.isActive,
+      bookedBy: booking.user ? booking.user.fullName : "Unknown",
+      department: booking.user ? booking.user.department : null,
+      bookingId: booking.id,
+    }));
 
     // Filter to only include available seats
-    const availableSeats = allSeats.filter(
-      (seat) => !bookedSeatIds.includes(seat.id)
-    );
+    const availableSeats = allSeats.filter(seat => !bookedSeatIds.has(seat.id));
 
-    return availableSeats;
+    // Return both available and booked seats
+    return {
+      availableSeats,
+      bookedSeats: bookedSeatsWithInfo,
+      totalSeats: allSeats.length,
+      bookedCount: bookedSeatsWithInfo.length,
+      availableCount: availableSeats.length
+    };
   } catch (error) {
     throw error;
   }

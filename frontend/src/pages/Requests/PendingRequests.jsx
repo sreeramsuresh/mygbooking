@@ -25,7 +25,9 @@ import {
   DialogActions,
   TextField,
   Avatar,
+  Breadcrumbs,
 } from "@mui/material";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -34,6 +36,9 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import HomeWorkIcon from "@mui/icons-material/HomeWork";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import PersonIcon from "@mui/icons-material/Person";
+import HomeIcon from "@mui/icons-material/Home";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 import requestService from "../../services/requestService";
 
 const PendingRequests = () => {
@@ -41,6 +46,7 @@ const PendingRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tabValue, setTabValue] = useState(0);
+  const navigate = useNavigate();
 
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -177,6 +183,23 @@ const PendingRequests = () => {
 
   return (
     <Container sx={{ mt: 4, mb: 8 }}>
+      {/* Breadcrumbs Navigation */}
+      <Breadcrumbs
+        separator={<NavigateNextIcon fontSize="small" />}
+        aria-label="breadcrumb"
+        sx={{ mb: 2 }}
+      >
+        <Button
+          component={RouterLink}
+          to="/dashboard"
+          startIcon={<HomeIcon />}
+          size="small"
+        >
+          Dashboard
+        </Button>
+        <Typography color="text.primary">Pending Requests</Typography>
+      </Breadcrumbs>
+
       <Box
         sx={{
           display: "flex",
@@ -188,6 +211,17 @@ const PendingRequests = () => {
         <Typography variant="h4">Pending Requests</Typography>
 
         <Box>
+          <Tooltip title="Back to Dashboard">
+            <Button
+              onClick={() => navigate("/dashboard")}
+              variant="outlined"
+              startIcon={<DashboardIcon />}
+              sx={{ mr: 1 }}
+            >
+              Dashboard
+            </Button>
+          </Tooltip>
+
           <Tooltip title="Refresh requests">
             <IconButton onClick={fetchRequests}>
               <RefreshIcon />
@@ -297,9 +331,17 @@ const PendingRequests = () => {
           <Typography variant="h6" gutterBottom>
             No pending requests
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             There are no pending requests that require your attention.
           </Typography>
+          <Button
+            variant="contained"
+            component={RouterLink}
+            to="/dashboard"
+            startIcon={<HomeIcon />}
+          >
+            Back to Dashboard
+          </Button>
         </Paper>
       )}
 

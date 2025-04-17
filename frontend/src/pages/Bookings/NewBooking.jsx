@@ -11,6 +11,7 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Breadcrumbs,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -20,7 +21,9 @@ import EventSeatIcon from "@mui/icons-material/EventSeat";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import InfoIcon from "@mui/icons-material/Info";
-import { useNavigate } from "react-router-dom";
+import HomeIcon from "@mui/icons-material/Home";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import useBookings from "../../hooks/useBookings";
 import SeatSelector from "../../components/booking/SeatSelector";
 
@@ -31,6 +34,7 @@ const NewBooking = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSeatId, setSelectedSeatId] = useState("");
   const [availableSeats, setAvailableSeats] = useState([]);
+  const [bookedSeats, setBookedSeats] = useState([]);
   const [isLoadingSeats, setIsLoadingSeats] = useState(false);
   const [seatsError, setSeatsError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -60,7 +64,15 @@ const NewBooking = () => {
       const response = await getAvailableSeats(formattedDate);
 
       if (response.success) {
-        setAvailableSeats(response.data || []);
+        // Check if the response has a nested structure with both available and booked seats
+        if (response.data && typeof response.data === 'object' && response.data.availableSeats) {
+          setAvailableSeats(response.data.availableSeats || []);
+          setBookedSeats(response.data.bookedSeats || []);
+        } else {
+          // If the response just has available seats
+          setAvailableSeats(response.data || []);
+          // Try to get booked seats from a different API call or endpoint if needed
+        }
       } else {
         setSeatsError(response.message || "Failed to load available seats");
       }
@@ -123,9 +135,42 @@ const NewBooking = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container sx={{ mt: 4, mb: 8 }}>
-        <Typography variant="h4" gutterBottom>
-          Book a Seat
-        </Typography>
+        {/* Breadcrumbs Navigation */}
+        <Breadcrumbs
+          separator={<NavigateNextIcon fontSize="small" />}
+          aria-label="breadcrumb"
+          sx={{ mb: 2 }}
+        >
+          <Button
+            component={RouterLink}
+            to="/dashboard"
+            startIcon={<HomeIcon />}
+            size="small"
+          >
+            Dashboard
+          </Button>
+          <Typography color="text.primary">Book a Seat</Typography>
+        </Breadcrumbs>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography variant="h4">Book a Seat</Typography>
+
+          <Button
+            variant="outlined"
+            component={RouterLink}
+            to="/dashboard"
+            startIcon={<HomeIcon />}
+          >
+            Back to Dashboard
+          </Button>
+        </Box>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -256,6 +301,7 @@ const NewBooking = () => {
 
                     <SeatSelector
                       seats={availableSeats}
+                      bookedSeats={bookedSeats}
                       selectedSeatId={selectedSeatId}
                       onSeatSelect={handleSeatSelect}
                     />

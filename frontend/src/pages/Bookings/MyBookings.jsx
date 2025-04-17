@@ -24,8 +24,9 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Breadcrumbs,
 } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -33,12 +34,15 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import EventSeatIcon from "@mui/icons-material/EventSeat";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import AccessTimeFilledIcon from "@mui/icons-material/AccessTimeFilled";
+import HomeIcon from "@mui/icons-material/Home";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { format, isAfter, isBefore, startOfToday } from "date-fns";
 import useBookings from "../../hooks/useBookings";
 
 const MyBookings = () => {
   const { myBookings, loading, error, fetchMyBookings, cancelBooking } =
     useBookings();
+  const navigate = useNavigate();
 
   const [tabValue, setTabValue] = useState(0);
   const [filteredBookings, setFilteredBookings] = useState([]);
@@ -140,6 +144,23 @@ const MyBookings = () => {
 
   return (
     <Container sx={{ mt: 4, mb: 8 }}>
+      {/* Breadcrumbs Navigation */}
+      <Breadcrumbs
+        separator={<NavigateNextIcon fontSize="small" />}
+        aria-label="breadcrumb"
+        sx={{ mb: 2 }}
+      >
+        <Button
+          component={RouterLink}
+          to="/dashboard"
+          startIcon={<HomeIcon />}
+          size="small"
+        >
+          Dashboard
+        </Button>
+        <Typography color="text.primary">My Bookings</Typography>
+      </Breadcrumbs>
+
       <Box
         sx={{
           display: "flex",
@@ -151,6 +172,17 @@ const MyBookings = () => {
         <Typography variant="h4">My Bookings</Typography>
 
         <Box>
+          <Tooltip title="Back to Dashboard">
+            <Button
+              onClick={() => navigate("/dashboard")}
+              variant="outlined"
+              startIcon={<HomeIcon />}
+              sx={{ mr: 1 }}
+            >
+              Dashboard
+            </Button>
+          </Tooltip>
+
           <Tooltip title="Refresh bookings">
             <IconButton onClick={fetchMyBookings} sx={{ mr: 1 }}>
               <RefreshIcon />
@@ -313,16 +345,26 @@ const MyBookings = () => {
               ? "You don't have any past bookings."
               : "You don't have any cancelled bookings."}
           </Typography>
-          {tabValue === 0 && (
+          <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
             <Button
-              variant="contained"
+              variant="outlined"
               component={RouterLink}
-              to="/bookings/new"
-              startIcon={<AddIcon />}
+              to="/dashboard"
+              startIcon={<HomeIcon />}
             >
-              Create a Booking
+              Back to Dashboard
             </Button>
-          )}
+            {tabValue === 0 && (
+              <Button
+                variant="contained"
+                component={RouterLink}
+                to="/bookings/new"
+                startIcon={<AddIcon />}
+              >
+                Create a Booking
+              </Button>
+            )}
+          </Box>
         </Paper>
       )}
 

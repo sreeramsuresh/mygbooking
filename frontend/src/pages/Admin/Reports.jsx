@@ -28,7 +28,9 @@ import {
   Tooltip,
   Card,
   CardContent,
+  Breadcrumbs,
 } from "@mui/material";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -53,6 +55,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import CalendarViewMonthIcon from "@mui/icons-material/CalendarViewMonth";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import HomeIcon from "@mui/icons-material/Home";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import EventSeatIcon from "@mui/icons-material/EventSeat";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
 import {
   format,
@@ -141,6 +148,7 @@ const generateMockRequestsData = () => {
 };
 
 const Reports = () => {
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -250,6 +258,23 @@ const Reports = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container sx={{ mt: 4, mb: 8 }}>
+        {/* Breadcrumbs Navigation */}
+        <Breadcrumbs
+          separator={<NavigateNextIcon fontSize="small" />}
+          aria-label="breadcrumb"
+          sx={{ mb: 2 }}
+        >
+          <Button
+            component={RouterLink}
+            to="/dashboard"
+            startIcon={<HomeIcon />}
+            size="small"
+          >
+            Dashboard
+          </Button>
+          <Typography color="text.primary">Reports</Typography>
+        </Breadcrumbs>
+
         <Box
           sx={{
             display: "flex",
@@ -261,6 +286,17 @@ const Reports = () => {
           <Typography variant="h4">Reports</Typography>
 
           <Box>
+            <Tooltip title="Back to Dashboard">
+              <Button
+                onClick={() => navigate("/dashboard")}
+                variant="outlined"
+                startIcon={<DashboardIcon />}
+                sx={{ mr: 1 }}
+              >
+                Dashboard
+              </Button>
+            </Tooltip>
+
             <Tooltip title="Refresh data">
               <IconButton onClick={fetchReportData} sx={{ mr: 1 }}>
                 <RefreshIcon />
@@ -442,677 +478,36 @@ const Reports = () => {
           </Box>
         ) : (
           <>
-            {/* Attendance Report */}
-            {tabValue === 0 && attendanceData.length > 0 && (
-              <Box>
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  {/* Summary Cards */}
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Total Employees
-                        </Typography>
-                        <Typography variant="h4">
-                          {attendanceData[0]?.total || 0}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Avg. Daily Attendance
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            attendanceData.reduce(
-                              (sum, day) => sum + day.present,
-                              0
-                            ) / attendanceData.length
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Avg. WFH Requests
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            attendanceData.reduce(
-                              (sum, day) => sum + day.wfh,
-                              0
-                            ) / attendanceData.length
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Attendance Rate
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            (attendanceData.reduce(
-                              (sum, day) => sum + day.present,
-                              0
-                            ) /
-                              attendanceData.reduce(
-                                (sum, day) => sum + day.total,
-                                0
-                              )) *
-                              100
-                          )}
-                          %
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Chart */}
-                <Paper sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Daily Attendance Trend
-                  </Typography>
-
-                  <Box sx={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={attendanceData}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <ChartTooltip />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="present"
-                          name="In Office"
-                          stroke="#8884d8"
-                          activeDot={{ r: 8 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="wfh"
-                          name="WFH"
-                          stroke="#82ca9d"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="absent"
-                          name="Absent"
-                          stroke="#ff7300"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Paper>
-
-                {/* Data Table */}
-                <Paper>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Date</TableCell>
-                          <TableCell>Day</TableCell>
-                          <TableCell align="right">Total Employees</TableCell>
-                          <TableCell align="right">In Office</TableCell>
-                          <TableCell align="right">WFH</TableCell>
-                          <TableCell align="right">Absent</TableCell>
-                          <TableCell align="right">Attendance %</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {attendanceData.map((row) => (
-                          <TableRow key={row.date}>
-                            <TableCell>{row.date}</TableCell>
-                            <TableCell>{row.day}</TableCell>
-                            <TableCell align="right">{row.total}</TableCell>
-                            <TableCell align="right">{row.present}</TableCell>
-                            <TableCell align="right">{row.wfh}</TableCell>
-                            <TableCell align="right">{row.absent}</TableCell>
-                            <TableCell align="right">
-                              {Math.round((row.present / row.total) * 100)}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
-              </Box>
-            )}
-
-            {/* Compliance Report */}
-            {tabValue === 1 && complianceData.length > 0 && (
-              <Box>
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  {/* Summary Cards */}
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Total Employees
-                        </Typography>
-                        <Typography variant="h4">
-                          {complianceData.reduce(
-                            (sum, dept) => sum + dept.totalUsers,
-                            0
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Compliant Employees
-                        </Typography>
-                        <Typography variant="h4">
-                          {complianceData.reduce(
-                            (sum, dept) => sum + dept.compliant,
-                            0
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Non-Compliant Employees
-                        </Typography>
-                        <Typography variant="h4">
-                          {complianceData.reduce(
-                            (sum, dept) => sum + dept.nonCompliant,
-                            0
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Overall Compliance Rate
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            (complianceData.reduce(
-                              (sum, dept) => sum + dept.compliant,
-                              0
-                            ) /
-                              complianceData.reduce(
-                                (sum, dept) => sum + dept.totalUsers,
-                                0
-                              )) *
-                              100
-                          )}
-                          %
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Chart */}
-                <Paper sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Compliance by Department
-                  </Typography>
-
-                  <Box sx={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={complianceData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="department" />
-                        <YAxis />
-                        <ChartTooltip />
-                        <Legend />
-                        <Bar
-                          dataKey="compliant"
-                          name="Compliant"
-                          stackId="a"
-                          fill="#82ca9d"
-                        />
-                        <Bar
-                          dataKey="nonCompliant"
-                          name="Non-Compliant"
-                          stackId="a"
-                          fill="#ff7300"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Paper>
-
-                {/* Data Table */}
-                <Paper>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Department</TableCell>
-                          <TableCell align="right">Total Employees</TableCell>
-                          <TableCell align="right">Compliant</TableCell>
-                          <TableCell align="right">Non-Compliant</TableCell>
-                          <TableCell align="right">Compliance Rate</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {complianceData.map((row) => (
-                          <TableRow key={row.department}>
-                            <TableCell>{row.department}</TableCell>
-                            <TableCell align="right">
-                              {row.totalUsers}
-                            </TableCell>
-                            <TableCell align="right">{row.compliant}</TableCell>
-                            <TableCell align="right">
-                              {row.nonCompliant}
-                            </TableCell>
-                            <TableCell align="right">
-                              <Chip
-                                label={`${row.complianceRate}%`}
-                                color={
-                                  row.complianceRate >= 80
-                                    ? "success"
-                                    : row.complianceRate >= 60
-                                    ? "warning"
-                                    : "error"
-                                }
-                                size="small"
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
-              </Box>
-            )}
-
-            {/* Seat Utilization Report */}
-            {tabValue === 2 && seatUtilizationData.length > 0 && (
-              <Box>
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  {/* Summary Cards */}
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Total Seats
-                        </Typography>
-                        <Typography variant="h4">
-                          {seatUtilizationData[0]?.total || 0}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Avg. Daily Bookings
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            seatUtilizationData.reduce(
-                              (sum, day) => sum + day.booked,
-                              0
-                            ) / seatUtilizationData.length
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Avg. Daily Utilization
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            seatUtilizationData.reduce(
-                              (sum, day) => sum + day.utilized,
-                              0
-                            ) / seatUtilizationData.length
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Utilization Rate
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            (seatUtilizationData.reduce(
-                              (sum, day) => sum + day.utilized,
-                              0
-                            ) /
-                              (seatUtilizationData.reduce(
-                                (sum, day) => sum + day.total,
-                                0
-                              ) *
-                                seatUtilizationData.length)) *
-                              100
-                          )}
-                          %
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Chart */}
-                <Paper sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Daily Seat Utilization
-                  </Typography>
-
-                  <Box sx={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={seatUtilizationData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <ChartTooltip />
-                        <Legend />
-                        <Bar dataKey="booked" name="Booked" fill="#8884d8" />
-                        <Bar
-                          dataKey="utilized"
-                          name="Utilized"
-                          fill="#82ca9d"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Paper>
-
-                {/* Data Table */}
-                <Paper>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Day</TableCell>
-                          <TableCell align="right">Total Seats</TableCell>
-                          <TableCell align="right">Booked</TableCell>
-                          <TableCell align="right">Utilized</TableCell>
-                          <TableCell align="right">Booking Rate</TableCell>
-                          <TableCell align="right">Utilization Rate</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {seatUtilizationData.map((row) => (
-                          <TableRow key={row.day}>
-                            <TableCell>{row.day}</TableCell>
-                            <TableCell align="right">{row.total}</TableCell>
-                            <TableCell align="right">{row.booked}</TableCell>
-                            <TableCell align="right">{row.utilized}</TableCell>
-                            <TableCell align="right">
-                              {Math.round((row.booked / row.total) * 100)}%
-                            </TableCell>
-                            <TableCell align="right">
-                              {Math.round((row.utilized / row.total) * 100)}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
-              </Box>
-            )}
-
-            {/* Requests Report */}
-            {tabValue === 3 && requestsData.length > 0 && (
-              <Box>
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  {/* Summary Cards */}
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Total Requests
-                        </Typography>
-                        <Typography variant="h4">
-                          {requestsData.reduce(
-                            (sum, day) => sum + day.regularization + day.wfh,
-                            0
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Regularization Requests
-                        </Typography>
-                        <Typography variant="h4">
-                          {requestsData.reduce(
-                            (sum, day) => sum + day.regularization,
-                            0
-                          )}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          WFH Requests
-                        </Typography>
-                        <Typography variant="h4">
-                          {requestsData.reduce((sum, day) => sum + day.wfh, 0)}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Approval Rate
-                        </Typography>
-                        <Typography variant="h4">
-                          {Math.round(
-                            (requestsData.reduce(
-                              (sum, day) => sum + day.approved,
-                              0
-                            ) /
-                              requestsData.reduce(
-                                (sum, day) => sum + day.approved + day.rejected,
-                                0
-                              )) *
-                              100
-                          )}
-                          %
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Chart */}
-                <Paper sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Request Trend
-                  </Typography>
-
-                  <Box sx={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={requestsData}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <ChartTooltip />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="regularization"
-                          name="Regularization"
-                          stroke="#8884d8"
-                          activeDot={{ r: 8 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="wfh"
-                          name="WFH"
-                          stroke="#82ca9d"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Paper>
-
-                {/* Data Table */}
-                <Paper>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Date</TableCell>
-                          <TableCell align="right">Regularization</TableCell>
-                          <TableCell align="right">WFH</TableCell>
-                          <TableCell align="right">Approved</TableCell>
-                          <TableCell align="right">Rejected</TableCell>
-                          <TableCell align="right">Approval Rate</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {requestsData.map((row) => (
-                          <TableRow key={row.date}>
-                            <TableCell>{row.date}</TableCell>
-                            <TableCell align="right">
-                              {row.regularization}
-                            </TableCell>
-                            <TableCell align="right">{row.wfh}</TableCell>
-                            <TableCell align="right">{row.approved}</TableCell>
-                            <TableCell align="right">{row.rejected}</TableCell>
-                            <TableCell align="right">
-                              {Math.round(
-                                (row.approved /
-                                  (row.approved + row.rejected || 1)) *
-                                  100
-                              )}
-                              %
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
-              </Box>
+            {/* Empty State - No Data */}
+            {((tabValue === 0 && attendanceData.length === 0) ||
+              (tabValue === 1 && complianceData.length === 0) ||
+              (tabValue === 2 && seatUtilizationData.length === 0) ||
+              (tabValue === 3 && requestsData.length === 0)) && (
+              <Paper sx={{ p: 4, textAlign: "center" }}>
+                <Typography variant="h6" gutterBottom>
+                  No report data available
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  {tabValue === 0
+                    ? "No attendance data available for the selected period."
+                    : tabValue === 1
+                    ? "No compliance data available for the selected month."
+                    : tabValue === 2
+                    ? "No seat utilization data available for the selected period."
+                    : "No request data available for the selected period."}
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={fetchReportData}
+                  startIcon={<RefreshIcon />}
+                >
+                  Generate Report
+                </Button>
+              </Paper>
             )}
           </>
         )}
