@@ -1,36 +1,40 @@
 // backend/routes/user.routes.js
 const express = require("express");
 const controller = require("../controllers/user.controller");
-const { authJwt } = require("../middleware");
+const { authJwt, verifySignUp } = require("../middleware");
 
 const router = express.Router();
 
 // Apply middleware to all routes
 router.use(authJwt.verifyToken);
 
-// Routes accessible by any authenticated user
-router.get("/departments", controller.getAllDepartments);
-router.get("/managers", controller.getAllManagers);
+// Public routes (for authenticated users)
+router.get("/profile", controller.getProfile);
+router.put("/profile", controller.updateProfile);
 
-// Routes that require specific roles
+// Admin routes
 router.get("/", [authJwt.isAdmin], controller.getAllUsers);
 
-router.get("/:id", [authJwt.isAdmin], controller.getUserById);
-
-router.post("/", [authJwt.isAdmin], controller.createUser);
-
-router.put("/:id", [authJwt.isAdmin], controller.updateUser);
-
-router.delete("/:id", [authJwt.isAdmin], controller.deleteUser);
-
-router.patch("/:id/status", [authJwt.isAdmin], controller.toggleUserStatus);
-
-router.patch("/:id/manager", [authJwt.isAdmin], controller.assignManager);
-
-router.get(
-  "/by-department",
-  [authJwt.isManager],
-  controller.getUsersByDepartment
+router.post(
+  "/",
+  [
+    authJwt.isAdmin,
+    verifySignUp.checkDuplicateUsernameOrEmail,
+    verifySignUp.checkRolesExisted,
+  ],
+  controller.createUser
 );
+
+router.get("/:userId", [authJwt.isAdmin], controller.getUserById);
+
+router.put("/:userId", [authJwt.isAdmin], controller.updateUser);
+
+router.delete("/:userId", [authJwt.isAdmin], controller.deleteUser);
+
+router.patch("/:userId/status", [authJwt.isAdmin], controller.toggleUserStatus);
+
+router.patch("/:userId/manager", [authJwt.isAdmin], controller.assignManager);
+
+router.get("/role/:role", [authJwt.isAdmin], controller.getUsersByRole);
 
 module.exports = router;
