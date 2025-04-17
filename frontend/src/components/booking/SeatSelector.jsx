@@ -1,165 +1,89 @@
 // frontend/src/components/booking/SeatSelector.jsx
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   Grid,
   Card,
   CardContent,
   Typography,
   Box,
-  Button,
   Chip,
-  CircularProgress,
-  Alert,
 } from "@mui/material";
 import EventSeatIcon from "@mui/icons-material/EventSeat";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import useBookings from "../../hooks/useBookings";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 
-const SeatSelector = ({ selectedDate, onSeatSelected, onBookingCreated }) => {
-  const { availableSeats, loading, error, fetchAvailableSeats, createBooking } =
-    useBookings();
-  const [selectedSeat, setSelectedSeat] = useState(null);
-  const [creating, setCreating] = useState(false);
-  const [bookingError, setBookingError] = useState("");
+const SeatSelector = ({ seats, selectedSeatId, onSeatSelect }) => {
+  if (!seats || seats.length === 0) {
+    return null;
+  }
 
-  useEffect(() => {
-    if (selectedDate) {
-      fetchAvailableSeats(selectedDate);
+  // Group seats by area/zone if that information exists
+  const seatsByZone = seats.reduce((zones, seat) => {
+    const zone = seat.zone || 'Office'; // Default zone if none exists
+    if (!zones[zone]) {
+      zones[zone] = [];
     }
-  }, [selectedDate, fetchAvailableSeats]);
-
-  const handleSeatClick = (seat) => {
-    setSelectedSeat(seat);
-    if (onSeatSelected) {
-      onSeatSelected(seat);
-    }
-  };
-
-  const handleConfirmBooking = async () => {
-    if (!selectedSeat || !selectedDate) return;
-
-    setCreating(true);
-    setBookingError("");
-
-    try {
-      const result = await createBooking(selectedSeat.id, selectedDate);
-
-      if (result.success) {
-        setSelectedSeat(null);
-        if (onBookingCreated) {
-          onBookingCreated(result.data);
-        }
-      } else {
-        setBookingError(result.message || "Failed to create booking");
-      }
-    } catch (err) {
-      setBookingError("An unexpected error occurred");
-      console.error("Booking confirmation error:", err);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  if (loading && !availableSeats.length) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
-
-  if (!selectedDate) {
-    return (
-      <Alert severity="info">
-        Please select a date to view available seats.
-      </Alert>
-    );
-  }
-
-  if (availableSeats.length === 0) {
-    return (
-      <Alert severity="warning">
-        No seats available for the selected date.
-      </Alert>
-    );
-  }
+    zones[zone].push(seat);
+    return zones;
+  }, {});
 
   return (
-    <Box>
-      {bookingError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {bookingError}
-        </Alert>
-      )}
-
-      <Typography variant="h6" gutterBottom>
-        Select a Seat
-      </Typography>
-
-      <Typography variant="subtitle2" gutterBottom>
-        Available: {availableSeats.length} seats
-      </Typography>
-
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        {availableSeats.map((seat) => (
-          <Grid item xs={6} sm={4} md={3} lg={2} key={seat.id}>
-            <Card
-              raised={selectedSeat?.id === seat.id}
-              sx={{
-                cursor: "pointer",
-                borderColor:
-                  selectedSeat?.id === seat.id ? "primary.main" : "transparent",
-                borderWidth: 2,
-                borderStyle: "solid",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: 3,
-                },
-              }}
-              onClick={() => handleSeatClick(seat)}
-            >
-              <CardContent sx={{ textAlign: "center", p: 2 }}>
-                <EventSeatIcon
-                  color={selectedSeat?.id === seat.id ? "primary" : "action"}
-                  sx={{ fontSize: 48 }}
-                />
-                <Typography variant="h6">Seat {seat.seatNumber}</Typography>
-                <Chip
-                  label="Available"
-                  size="small"
-                  color="success"
-                  icon={<CheckCircleOutlineIcon />}
-                  sx={{ mt: 1 }}
-                />
-              </CardContent>
-            </Card>
+    <>
+      {Object.entries(seatsByZone).map(([zone, zoneSeats]) => (
+        <Box key={zone} sx={{ mb: 4 }}>
+          {Object.keys(seatsByZone).length > 1 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <LocationOnIcon sx={{ mr: 1 }} />
+              <Typography variant="subtitle1">{zone}</Typography>
+            </Box>
+          )}
+          
+          <Grid container spacing={2}>
+            {zoneSeats.map((seat) => (
+              <Grid item xs={6} sm={4} md={3} key={seat.id}>
+                <Card
+                  sx={{
+                    cursor: "pointer",
+                    borderColor: selectedSeatId === seat.id ? "primary.main" : "transparent",
+                    borderWidth: 2,
+                    borderStyle: "solid",
+                    transition: "all 0.2s ease",
+                    height: '100%',
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 3,
+                    },
+                  }}
+                  onClick={() => onSeatSelect(seat.id)}
+                  raised={selectedSeatId === seat.id}
+                >
+                  <CardContent sx={{ textAlign: "center", p: 2 }}>
+                    <EventSeatIcon
+                      color={selectedSeatId === seat.id ? "primary" : "action"}
+                      sx={{ fontSize: 40, mb: 1 }}
+                    />
+                    <Typography variant="h6" gutterBottom>
+                      Seat {seat.seatNumber}
+                    </Typography>
+                    {seat.description && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {seat.description}
+                      </Typography>
+                    )}
+                    <Chip
+                      label={selectedSeatId === seat.id ? "Selected" : "Available"}
+                      size="small"
+                      color={selectedSeatId === seat.id ? "primary" : "success"}
+                      icon={<CheckCircleOutlineIcon />}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
-
-      {selectedSeat && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          <Button
-            variant="contained"
-            size="large"
-            disabled={creating}
-            onClick={handleConfirmBooking}
-            startIcon={creating ? <CircularProgress size={20} /> : null}
-          >
-            {creating ? "Booking..." : "Confirm Booking"}
-          </Button>
         </Box>
-      )}
-    </Box>
+      ))}
+    </>
   );
 };
 

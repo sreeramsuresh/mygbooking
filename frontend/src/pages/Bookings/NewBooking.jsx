@@ -1,416 +1,278 @@
-// frontend/src/pages/Requests/PendingRequests.jsx
+// frontend/src/pages/Bookings/NewBooking.jsx
 import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
   Box,
   Paper,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
+  Grid,
+  Card,
+  CardContent,
+  Button,
   CircularProgress,
   Alert,
-  Button,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
-  Avatar,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Divider,
+  Chip,
 } from "@mui/material";
-import { format } from "date-fns";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import FilterListIcon from "@mui/icons-material/FilterList";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { format, addDays, isWeekend, isBefore, startOfToday } from "date-fns";
+import EventSeatIcon from "@mui/icons-material/EventSeat";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import HomeWorkIcon from "@mui/icons-material/HomeWork";
-import NoteAddIcon from "@mui/icons-material/NoteAdd";
-import PersonIcon from "@mui/icons-material/Person";
-import requestService from "../../services/requestService";
+import InfoIcon from "@mui/icons-material/Info";
+import { useNavigate } from "react-router-dom";
+import useBookings from "../../hooks/useBookings";
+import SeatSelector from "../../components/booking/SeatSelector";
 
-const PendingRequests = () => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [tabValue, setTabValue] = useState(0);
+const NewBooking = () => {
+  const navigate = useNavigate();
+  const { loading, error, createBooking, getAvailableSeats } = useBookings();
+  
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSeatId, setSelectedSeatId] = useState("");
+  const [availableSeats, setAvailableSeats] = useState([]);
+  const [isLoadingSeats, setIsLoadingSeats] = useState(false);
+  const [seatsError, setSeatsError] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState("");
 
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [responseMessage, setResponseMessage] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [actionError, setActionError] = useState("");
-
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      // Determine filter based on tab
-      const filter = {
-        type:
-          tabValue === 1
-            ? "regularization"
-            : tabValue === 2
-            ? "wfh"
-            : undefined,
-      };
-
-      const response = await requestService.getPendingRequests(filter);
-
-      if (response.success) {
-        setRequests(response.data);
-      } else {
-        setError(response.message || "Failed to fetch pending requests");
-      }
-    } catch (err) {
-      setError("An error occurred while fetching requests");
-      console.error("Fetch requests error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Date constraints
+  const today = startOfToday();
+  const minDate = today;
+  const maxDate = addDays(today, 14); // Allow booking up to 2 weeks in advance
 
   useEffect(() => {
-    fetchRequests();
-  }, [tabValue]);
+    if (selectedDate) {
+      fetchAvailableSeats();
+    }
+  }, [selectedDate]);
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
-  const handleOpenApproveDialog = (request) => {
-    setSelectedRequest(request);
-    setResponseMessage("Approved");
-    setApproveDialogOpen(true);
-  };
-
-  const handleCloseApproveDialog = () => {
-    setApproveDialogOpen(false);
-    setSelectedRequest(null);
-    setResponseMessage("");
-    setActionError("");
-  };
-
-  const handleOpenRejectDialog = (request) => {
-    setSelectedRequest(request);
-    setResponseMessage("");
-    setRejectDialogOpen(true);
-  };
-
-  const handleCloseRejectDialog = () => {
-    setRejectDialogOpen(false);
-    setSelectedRequest(null);
-    setResponseMessage("");
-    setActionError("");
-  };
-
-  const handleApproveRequest = async () => {
-    if (!selectedRequest) return;
+  const fetchAvailableSeats = async () => {
+    if (!selectedDate) return;
 
     try {
-      setProcessing(true);
-      setActionError("");
+      setIsLoadingSeats(true);
+      setSeatsError("");
+      setSelectedSeatId("");
 
-      const response = await requestService.approveRequest(
-        selectedRequest.id,
-        responseMessage
-      );
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const response = await getAvailableSeats(formattedDate);
 
       if (response.success) {
-        // Refresh requests
-        await fetchRequests();
-        handleCloseApproveDialog();
+        setAvailableSeats(response.data || []);
       } else {
-        setActionError(response.message || "Failed to approve request");
+        setSeatsError(response.message || "Failed to load available seats");
       }
     } catch (err) {
-      setActionError("An error occurred while processing the request");
-      console.error("Approve request error:", err);
+      setSeatsError("An error occurred while fetching available seats");
+      console.error("Fetch seats error:", err);
     } finally {
-      setProcessing(false);
+      setIsLoadingSeats(false);
     }
   };
 
-  const handleRejectRequest = async () => {
-    if (!selectedRequest || !responseMessage) return;
+  const handleSeatSelect = (seatId) => {
+    setSelectedSeatId(seatId);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedDate || !selectedSeatId) {
+      setBookingError("Please select both a date and a seat");
+      return;
+    }
 
     try {
-      setProcessing(true);
-      setActionError("");
+      setIsSubmitting(true);
+      setBookingError("");
+      setBookingSuccess(false);
 
-      const response = await requestService.rejectRequest(
-        selectedRequest.id,
-        responseMessage
-      );
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const response = await createBooking(selectedSeatId, formattedDate);
 
       if (response.success) {
-        // Refresh requests
-        await fetchRequests();
-        handleCloseRejectDialog();
+        setBookingSuccess(true);
+        
+        // Reset form
+        setSelectedDate(null);
+        setSelectedSeatId("");
+        setAvailableSeats([]);
+        
+        // Navigate to My Bookings after a short delay
+        setTimeout(() => {
+          navigate("/bookings/my");
+        }, 2000);
       } else {
-        setActionError(response.message || "Failed to reject request");
+        setBookingError(response.message || "Failed to create booking");
       }
     } catch (err) {
-      setActionError("An error occurred while processing the request");
-      console.error("Reject request error:", err);
+      setBookingError("An error occurred while creating the booking");
+      console.error("Booking create error:", err);
     } finally {
-      setProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
-  const getRequestTypeIcon = (type) => {
-    return type === "regularization" ? <NoteAddIcon /> : <HomeWorkIcon />;
-  };
-
-  const getRequestTypeLabel = (type) => {
-    return type === "regularization" ? "Regularization" : "Work From Home";
+  const isDateDisabled = (date) => {
+    // Disable weekends and dates before today or after 2 weeks
+    return (
+      isWeekend(date) ||
+      isBefore(date, today) ||
+      isBefore(maxDate, date)
+    );
   };
 
   return (
-    <Container sx={{ mt: 4, mb: 8 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4">Pending Requests</Typography>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Container sx={{ mt: 4, mb: 8 }}>
+        <Typography variant="h4" gutterBottom>
+          Book a Seat
+        </Typography>
 
-        <Box>
-          <Tooltip title="Refresh requests">
-            <IconButton onClick={fetchRequests}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          aria-label="request type tabs"
-          sx={{ borderBottom: 1, borderColor: "divider" }}
-        >
-          <Tab label="All Requests" />
-          <Tab label="Regularization" />
-          <Tab label="Work From Home" />
-        </Tabs>
-      </Paper>
+        {bookingSuccess && (
+          <Alert 
+            severity="success" 
+            sx={{ mb: 3 }}
+            icon={<CheckCircleIcon fontSize="inherit" />}
+          >
+            Booking created successfully! Redirecting to My Bookings...
+          </Alert>
+        )}
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+        {bookingError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {bookingError}
+          </Alert>
+        )}
 
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : requests.length > 0 ? (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Employee</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Reason</TableCell>
-                <TableCell>Requested On</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {requests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Avatar sx={{ mr: 2, bgcolor: "primary.main" }}>
-                        <PersonIcon />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2">
-                          {request.user.fullName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {request.user.department}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={getRequestTypeIcon(request.type)}
-                      label={getRequestTypeLabel(request.type)}
-                      color={
-                        request.type === "regularization" ? "warning" : "info"
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  <CalendarTodayIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Select Date
+                </Typography>
+                <Divider sx={{ my: 2 }} />
+                
+                <Box component="form" onSubmit={handleSubmit}>
+                  <DatePicker
+                    label="Booking Date"
+                    value={selectedDate}
+                    onChange={(newDate) => {
+                      setSelectedDate(newDate);
+                      setBookingSuccess(false);
+                    }}
+                    shouldDisableDate={isDateDisabled}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    disablePast
+                    sx={{ width: '100%', mb: 2 }}
+                    slotProps={{
+                      textField: {
+                        required: true,
+                        fullWidth: true,
+                        margin: "normal",
+                        helperText: "Select a workday (Mon-Fri) within the next 2 weeks"
                       }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(request.date), "MMM d, yyyy")}
-                  </TableCell>
-                  <TableCell sx={{ maxWidth: 250 }}>{request.reason}</TableCell>
-                  <TableCell>
-                    {format(new Date(request.createdAt), "MMM d, yyyy")}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Tooltip title="Approve">
-                        <IconButton
-                          color="success"
-                          onClick={() => handleOpenApproveDialog(request)}
-                        >
-                          <CheckCircleIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Reject">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleOpenRejectDialog(request)}
-                        >
-                          <CancelIcon />
-                        </IconButton>
-                      </Tooltip>
+                    }}
+                  />
+
+                  <Alert 
+                    severity="info" 
+                    icon={<InfoIcon fontSize="inherit" />}
+                    sx={{ mt: 2, mb: 2 }}
+                  >
+                    Seats can be booked up to 2 weeks in advance. Weekend bookings are not available.
+                  </Alert>
+                  
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={!selectedDate || !selectedSeatId || isSubmitting}
+                    sx={{ mt: 2 }}
+                  >
+                    {isSubmitting ? <CircularProgress size={24} /> : "Confirm Booking"}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  <EventSeatIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Select Seat
+                </Typography>
+                <Divider sx={{ my: 2 }} />
+
+                {!selectedDate ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      Please select a date first to see available seats
+                    </Typography>
+                  </Box>
+                ) : isLoadingSeats ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : seatsError ? (
+                  <Alert severity="error" sx={{ my: 2 }}>
+                    {seatsError}
+                  </Alert>
+                ) : availableSeats.length === 0 ? (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ my: 2 }}
+                  >
+                    No seats available for the selected date. Please choose another date.
+                  </Alert>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Available seats for {format(selectedDate, "EEE, MMMM d, yyyy")}:
+                      </Typography>
+                      <Chip 
+                        label={`${availableSeats.length} seats available`} 
+                        color="primary" 
+                        size="small" 
+                      />
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Paper sx={{ p: 4, textAlign: "center" }}>
-          <Typography variant="h6" gutterBottom>
-            No pending requests
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            There are no pending requests that require your attention.
-          </Typography>
-        </Paper>
-      )}
-
-      {/* Approve Request Dialog */}
-      <Dialog open={approveDialogOpen} onClose={handleCloseApproveDialog}>
-        <DialogTitle>Approve Request</DialogTitle>
-        <DialogContent>
-          {selectedRequest && (
-            <>
-              <Typography variant="subtitle1" gutterBottom>
-                {selectedRequest.user.fullName} -{" "}
-                {format(new Date(selectedRequest.date), "EEEE, MMMM d, yyyy")}
-              </Typography>
-              <Typography variant="subtitle2" gutterBottom>
-                {selectedRequest.type === "regularization"
-                  ? "Regularization Request"
-                  : "Work From Home Request"}
-              </Typography>
-              <Typography variant="body2" paragraph>
-                Reason: {selectedRequest.reason}
-              </Typography>
-
-              {actionError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {actionError}
-                </Alert>
-              )}
-
-              <TextField
-                fullWidth
-                label="Response Message (Optional)"
-                value={responseMessage}
-                onChange={(e) => setResponseMessage(e.target.value)}
-                multiline
-                rows={2}
-                margin="normal"
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseApproveDialog}>Cancel</Button>
-          <Button
-            onClick={handleApproveRequest}
-            variant="contained"
-            color="success"
-            disabled={processing}
-          >
-            {processing ? <CircularProgress size={24} /> : "Approve"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Reject Request Dialog */}
-      <Dialog open={rejectDialogOpen} onClose={handleCloseRejectDialog}>
-        <DialogTitle>Reject Request</DialogTitle>
-        <DialogContent>
-          {selectedRequest && (
-            <>
-              <Typography variant="subtitle1" gutterBottom>
-                {selectedRequest.user.fullName} -{" "}
-                {format(new Date(selectedRequest.date), "EEEE, MMMM d, yyyy")}
-              </Typography>
-              <Typography variant="subtitle2" gutterBottom>
-                {selectedRequest.type === "regularization"
-                  ? "Regularization Request"
-                  : "Work From Home Request"}
-              </Typography>
-              <Typography variant="body2" paragraph>
-                Reason: {selectedRequest.reason}
-              </Typography>
-
-              {actionError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {actionError}
-                </Alert>
-              )}
-
-              <TextField
-                fullWidth
-                label="Rejection Reason (Required)"
-                value={responseMessage}
-                onChange={(e) => setResponseMessage(e.target.value)}
-                multiline
-                rows={3}
-                margin="normal"
-                required
-                error={!responseMessage}
-                helperText={
-                  !responseMessage
-                    ? "Please provide a reason for rejection"
-                    : ""
-                }
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseRejectDialog}>Cancel</Button>
-          <Button
-            onClick={handleRejectRequest}
-            variant="contained"
-            color="error"
-            disabled={processing || !responseMessage}
-          >
-            {processing ? <CircularProgress size={24} /> : "Reject"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+                    
+                    <SeatSelector 
+                      seats={availableSeats}
+                      selectedSeatId={selectedSeatId}
+                      onSeatSelect={handleSeatSelect}
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </LocalizationProvider>
   );
 };
 
-export default PendingRequests;
+export default NewBooking;

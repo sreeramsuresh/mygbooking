@@ -45,7 +45,13 @@ const userService = {
 
   createUser: async (userData) => {
     try {
-      const response = await axios.post(API_ENDPOINT, userData);
+      // Convert empty strings to null for integer fields
+      const processedData = { ...userData };
+      if (processedData.managerId === "") {
+        processedData.managerId = null;
+      }
+      
+      const response = await axios.post(API_ENDPOINT, processedData);
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -57,7 +63,13 @@ const userService = {
 
   updateUser: async (userId, userData) => {
     try {
-      const response = await axios.put(`${API_ENDPOINT}/${userId}`, userData);
+      // Convert empty strings to null for integer fields
+      const processedData = { ...userData };
+      if (processedData.managerId === "") {
+        processedData.managerId = null;
+      }
+      
+      const response = await axios.put(`${API_ENDPOINT}/${userId}`, processedData);
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -95,8 +107,11 @@ const userService = {
 
   assignManager: async (userId, managerId) => {
     try {
+      // Convert empty string to null
+      const finalManagerId = managerId === "" ? null : managerId;
+      
       const response = await axios.patch(`${API_ENDPOINT}/${userId}/manager`, {
-        managerId,
+        managerId: finalManagerId,
       });
       return response.data;
     } catch (error) {

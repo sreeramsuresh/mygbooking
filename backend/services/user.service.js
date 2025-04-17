@@ -96,6 +96,10 @@ const createUser = async (userData, createdBy = null) => {
 
     // Create the user
     const hashedPassword = bcrypt.hashSync(userData.password, 8);
+    
+    // Sanitize the manager ID - if it's an empty string, set it to null
+    const managerId = userData.managerId === "" ? null : (userData.managerId || null);
+    
     const user = await User.create({
       username: userData.username,
       email: userData.email,
@@ -103,7 +107,7 @@ const createUser = async (userData, createdBy = null) => {
       fullName: userData.fullName,
       department: userData.department,
       isActive: userData.isActive !== undefined ? userData.isActive : true,
-      managerId: userData.managerId || null,
+      managerId: managerId,
       defaultWorkDays: userData.defaultWorkDays || [1, 2, 3, 4, 5],
       requiredDaysPerWeek: userData.requiredDaysPerWeek || 2,
     });
@@ -211,11 +215,16 @@ const updateUser = async (userId, updates, performedBy = null) => {
       "requiredDaysPerWeek",
     ];
 
-    // Filter only valid fields
+    // Filter only valid fields and sanitize input
     const validUpdates = {};
     updateFields.forEach((field) => {
       if (updates[field] !== undefined) {
-        validUpdates[field] = updates[field];
+        // Convert empty strings to null for numeric fields
+        if ((field === "managerId" || field === "requiredDaysPerWeek") && updates[field] === "") {
+          validUpdates[field] = null;
+        } else {
+          validUpdates[field] = updates[field];
+        }
       }
     });
 
@@ -367,8 +376,9 @@ const assignManager = async (userId, managerId, performedBy = null) => {
     // Store old values for audit log
     const oldValues = { ...user.dataValues };
 
-    // Update manager
-    await user.update({ managerId });
+    // Update manager - ensure empty string is converted to null
+    const finalManagerId = managerId === "" ? null : managerId;
+    await user.update({ managerId: finalManagerId });
 
     // Log manager assignment
     if (performedBy) {
