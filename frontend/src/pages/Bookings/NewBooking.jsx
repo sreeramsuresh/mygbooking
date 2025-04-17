@@ -11,13 +11,6 @@ import {
   Button,
   CircularProgress,
   Alert,
-  TextField,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Divider,
-  Chip,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -34,7 +27,7 @@ import SeatSelector from "../../components/booking/SeatSelector";
 const NewBooking = () => {
   const navigate = useNavigate();
   const { loading, error, createBooking, getAvailableSeats } = useBookings();
-  
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSeatId, setSelectedSeatId] = useState("");
   const [availableSeats, setAvailableSeats] = useState([]);
@@ -101,12 +94,12 @@ const NewBooking = () => {
 
       if (response.success) {
         setBookingSuccess(true);
-        
+
         // Reset form
         setSelectedDate(null);
         setSelectedSeatId("");
         setAvailableSeats([]);
-        
+
         // Navigate to My Bookings after a short delay
         setTimeout(() => {
           navigate("/bookings/my");
@@ -124,11 +117,7 @@ const NewBooking = () => {
 
   const isDateDisabled = (date) => {
     // Disable weekends and dates before today or after 2 weeks
-    return (
-      isWeekend(date) ||
-      isBefore(date, today) ||
-      isBefore(maxDate, date)
-    );
+    return isWeekend(date) || isBefore(date, today) || isBefore(maxDate, date);
   };
 
   return (
@@ -145,8 +134,8 @@ const NewBooking = () => {
         )}
 
         {bookingSuccess && (
-          <Alert 
-            severity="success" 
+          <Alert
+            severity="success"
             sx={{ mb: 3 }}
             icon={<CheckCircleIcon fontSize="inherit" />}
           >
@@ -165,11 +154,13 @@ const NewBooking = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  <CalendarTodayIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  <CalendarTodayIcon sx={{ mr: 1, verticalAlign: "middle" }} />
                   Select Date
                 </Typography>
-                <Divider sx={{ my: 2 }} />
-                
+                <Box
+                  sx={{ my: 2, borderBottom: 1, borderColor: "divider", pb: 2 }}
+                />
+
                 <Box component="form" onSubmit={handleSubmit}>
                   <DatePicker
                     label="Booking Date"
@@ -182,25 +173,27 @@ const NewBooking = () => {
                     minDate={minDate}
                     maxDate={maxDate}
                     disablePast
-                    sx={{ width: '100%', mb: 2 }}
+                    sx={{ width: "100%", mb: 2 }}
                     slotProps={{
                       textField: {
                         required: true,
                         fullWidth: true,
                         margin: "normal",
-                        helperText: "Select a workday (Mon-Fri) within the next 2 weeks"
-                      }
+                        helperText:
+                          "Select a workday (Mon-Fri) within the next 2 weeks",
+                      },
                     }}
                   />
 
-                  <Alert 
-                    severity="info" 
+                  <Alert
+                    severity="info"
                     icon={<InfoIcon fontSize="inherit" />}
                     sx={{ mt: 2, mb: 2 }}
                   >
-                    Seats can be booked up to 2 weeks in advance. Weekend bookings are not available.
+                    Seats can be booked up to 2 weeks in advance. Weekend
+                    bookings are not available.
                   </Alert>
-                  
+
                   <Button
                     type="submit"
                     variant="contained"
@@ -209,7 +202,11 @@ const NewBooking = () => {
                     disabled={!selectedDate || !selectedSeatId || isSubmitting}
                     sx={{ mt: 2 }}
                   >
-                    {isSubmitting ? <CircularProgress size={24} /> : "Confirm Booking"}
+                    {isSubmitting ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      "Confirm Booking"
+                    )}
                   </Button>
                 </Box>
               </CardContent>
@@ -220,19 +217,23 @@ const NewBooking = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  <EventSeatIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  <EventSeatIcon sx={{ mr: 1, verticalAlign: "middle" }} />
                   Select Seat
                 </Typography>
-                <Divider sx={{ my: 2 }} />
+                <Box
+                  sx={{ my: 2, borderBottom: 1, borderColor: "divider", pb: 2 }}
+                />
 
                 {!selectedDate ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Box sx={{ textAlign: "center", py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       Please select a date first to see available seats
                     </Typography>
                   </Box>
                 ) : isLoadingSeats ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", py: 4 }}
+                  >
                     <CircularProgress />
                   </Box>
                 ) : seatsError ? (
@@ -240,26 +241,20 @@ const NewBooking = () => {
                     {seatsError}
                   </Alert>
                 ) : availableSeats.length === 0 ? (
-                  <Alert 
-                    severity="warning" 
-                    sx={{ my: 2 }}
-                  >
-                    No seats available for the selected date. Please choose another date.
+                  <Alert severity="warning" sx={{ my: 2 }}>
+                    No seats available for the selected date. Please choose
+                    another date.
                   </Alert>
                 ) : (
                   <>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="subtitle1" gutterBottom>
-                        Available seats for {format(selectedDate, "EEE, MMMM d, yyyy")}:
+                        Available seats for{" "}
+                        {format(selectedDate, "EEE, MMMM d, yyyy")}:
                       </Typography>
-                      <Chip 
-                        label={`${availableSeats.length} seats available`} 
-                        color="primary" 
-                        size="small" 
-                      />
                     </Box>
-                    
-                    <SeatSelector 
+
+                    <SeatSelector
                       seats={availableSeats}
                       selectedSeatId={selectedSeatId}
                       onSeatSelect={handleSeatSelect}
