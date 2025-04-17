@@ -1,8 +1,8 @@
-// frontend/src/services/userService.js
+// frontend/src/services/requestService.js
 import axios from "axios";
 import { API_URL } from "../config";
 
-const API_ENDPOINT = `${API_URL}/users`;
+const API_ENDPOINT = `${API_URL}/requests`;
 
 // Request interceptor to add auth token
 axios.interceptors.request.use(
@@ -18,71 +18,12 @@ axios.interceptors.request.use(
   }
 );
 
-const userService = {
-  getAllUsers: async () => {
+const requestService = {
+  createRegularizationRequest: async (date, reason) => {
     try {
-      const response = await axios.get(API_ENDPOINT);
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  getUserById: async (userId) => {
-    try {
-      const response = await axios.get(`${API_ENDPOINT}/${userId}`);
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  createUser: async (userData) => {
-    try {
-      const response = await axios.post(API_ENDPOINT, userData);
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  updateUser: async (userId, userData) => {
-    try {
-      const response = await axios.put(`${API_ENDPOINT}/${userId}`, userData);
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  deleteUser: async (userId) => {
-    try {
-      const response = await axios.delete(`${API_ENDPOINT}/${userId}`);
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        return error.response.data;
-      }
-      throw error;
-    }
-  },
-
-  toggleUserStatus: async (userId, isActive) => {
-    try {
-      const response = await axios.patch(`${API_ENDPOINT}/${userId}/status`, {
-        isActive,
+      const response = await axios.post(`${API_ENDPOINT}/regularization`, {
+        date,
+        reason,
       });
       return response.data;
     } catch (error) {
@@ -93,10 +34,70 @@ const userService = {
     }
   },
 
-  assignManager: async (userId, managerId) => {
+  createWFHRequest: async (date, reason) => {
     try {
-      const response = await axios.patch(`${API_ENDPOINT}/${userId}/manager`, {
-        managerId,
+      const response = await axios.post(`${API_ENDPOINT}/wfh`, {
+        date,
+        reason,
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  getMyRequests: async (filters = {}) => {
+    try {
+      const response = await axios.get(`${API_ENDPOINT}/my`, {
+        params: filters,
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  getPendingRequests: async (filters = {}) => {
+    try {
+      const response = await axios.get(`${API_ENDPOINT}/pending`, {
+        params: filters,
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  approveRequest: async (requestId, responseMessage = "") => {
+    try {
+      const response = await axios.post(
+        `${API_ENDPOINT}/${requestId}/approve`,
+        {
+          responseMessage,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
+
+  rejectRequest: async (requestId, responseMessage) => {
+    try {
+      const response = await axios.post(`${API_ENDPOINT}/${requestId}/reject`, {
+        responseMessage,
       });
       return response.data;
     } catch (error) {
@@ -108,4 +109,4 @@ const userService = {
   },
 };
 
-export default userService;
+export default requestService;
