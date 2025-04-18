@@ -85,8 +85,8 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
                         borderStyle: "solid",
                         transition: "all 0.2s ease",
                         height: "100%",
-                        opacity: isBooked ? 0.8 : 1,
-                        backgroundColor: isBooked ? 'grey.100' : 'white',
+                        opacity: 1,
+                        backgroundColor: isBooked ? 'rgba(244, 67, 54, 0.15)' : 'white',
                         "&:hover": {
                           transform: isBooked ? "none" : "translateY(-4px)",
                           boxShadow: isBooked ? 1 : 3,
@@ -107,7 +107,7 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
                             }}
                           >
                             <EventSeatIcon
-                              color="disabled"
+                              color="error"
                               sx={{ fontSize: 40, mb: 1 }}
                             />
                           </Badge>

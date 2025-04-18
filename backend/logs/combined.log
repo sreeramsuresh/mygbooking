@@ -40,3 +40,19 @@
 2025-04-17T09:59:27.160Z info: Database initialization completed successfully.
 2025-04-17T09:59:27.169Z info: Scheduler initialized successfully
 2025-04-17T09:59:27.174Z info: Server is running on port 8080
+2025-04-17T23:13:08.911Z info: Checking database structure...
+2025-04-17T23:13:10.385Z info: Database synchronized successfully.
+2025-04-17T23:13:10.399Z info: Roles already exist, skipping seed.
+2025-04-17T23:13:10.404Z info: Users already exist, skipping admin user creation.
+2025-04-17T23:13:10.413Z info: Seats already exist, skipping seat creation.
+2025-04-17T23:13:10.413Z info: Database initialization completed successfully.
+2025-04-17T23:13:10.425Z info: Scheduler initialized successfully
+2025-04-17T23:13:10.434Z info: Server is running on port 8080
+2025-04-18T22:49:50.235Z info: Checking database structure...
+2025-04-18T22:49:51.906Z info: Database synchronized successfully.
+2025-04-18T22:49:51.941Z info: Roles already exist, skipping seed.
+2025-04-18T22:49:51.948Z info: Users already exist, skipping admin user creation.
+2025-04-18T22:49:51.951Z info: Seats already exist, skipping seat creation.
+2025-04-18T22:49:51.952Z info: Database initialization completed successfully.
+2025-04-18T22:49:51.962Z info: Scheduler initialized successfully
+2025-04-18T22:49:51.969Z info: Server is running on port 8080
