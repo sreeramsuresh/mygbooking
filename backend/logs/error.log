@@ -1,2 +1,0 @@
-2025-04-17T04:13:53.908Z error: Database initialization failed: database "office_attendance" does not exist
-2025-04-17T09:29:36.528Z error: Database initialization failed: SQLITE_ERROR: near "[1,2,3,4,5]": syntax error
