@@ -290,3 +290,60 @@ exports.getUsersByRole = async (req, res) => {
     return apiResponse.serverError(res, error);
   }
 };
+
+/**
+ * Update auto-booking preferences for all users
+ * Admin only operation
+ */
+exports.updateAllUserPreferences = async (req, res) => {
+  try {
+    // This is an admin-only operation
+    if (!req.userRoles.includes('ROLE_ADMIN') && !req.userRoles.includes('admin')) {
+      return apiResponse.forbidden(
+        res,
+        "Only administrators can update user preferences"
+      );
+    }
+    
+    const { updateAllUserPreferences } = require("../utils/updatePreferences");
+    const logger = require("../utils/logger");
+    
+    logger.info("Admin triggered update of all user preferences");
+    
+    // Update all user preferences
+    const result = await updateAllUserPreferences();
+    
+    logger.info(`Preferences update complete: ${result.updatedCount} updated, ${result.failedCount} failed`);
+    
+    // Run auto-booking process if requested
+    if (req.body.runAutoBooking) {
+      logger.info("Running auto-booking process after preference update");
+      const scheduler = require("../utils/scheduler");
+      const bookingResult = await scheduler.processAutoBookingsForAllUsers();
+      
+      return apiResponse.success(
+        res,
+        "User preferences updated and auto-booking process completed",
+        {
+          preferencesUpdated: result.updatedCount,
+          preferencesFailed: result.failedCount,
+          bookingsCreated: bookingResult.successCount,
+          bookingsFailed: bookingResult.failedCount,
+          bookingsSkipped: bookingResult.noPrefsCount
+        }
+      );
+    }
+    
+    return apiResponse.success(
+      res,
+      "User preferences updated successfully",
+      {
+        updated: result.updatedCount,
+        failed: result.failedCount
+      }
+    );
+  } catch (error) {
+    console.error('Error updating user preferences:', error);
+    return apiResponse.serverError(res, error);
+  }
+};

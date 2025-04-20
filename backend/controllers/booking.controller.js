@@ -466,95 +466,32 @@ exports.forceAutoBookingForAll = async (req, res) => {
       );
     }
     
-    const db = require("../db/models");
-    const User = db.user;
+    const scheduler = require("../utils/scheduler");
     const logger = require("../utils/logger");
     
-    // Get all active users
-    const users = await User.findAll({
-      where: {
-        isActive: true
+    logger.info("Starting forced auto-booking process for all users");
+    
+    // Use the centralized function that handles auto-booking for all users
+    const result = await scheduler.processAutoBookingsForAllUsers();
+    
+    logger.info(`Force auto-booking complete with result: ${JSON.stringify(result)}`);
+    
+    // Convert the result to the expected format
+    const formattedResult = {
+      successful: result.successCount || 0,
+      failed: result.failedCount || 0,
+      skipped: result.noPrefsCount || 0,
+      details: {
+        success: [],
+        failed: [],
+        skipped: []
       }
-    });
-    
-    logger.info(`Starting force auto-booking for ${users.length} active users`);
-    
-    // Get the date for next Monday
-    const today = new Date();
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7));
-    const formattedDate = nextMonday.toISOString().split('T')[0];
-    
-    const results = {
-      success: [],
-      failed: [],
-      skipped: []
     };
-    
-    // Process each user
-    for (const user of users) {
-      try {
-        logger.info(`Processing auto-booking for user ${user.id} (${user.username})`);
-        
-        // Check if the user has valid preferences
-        if (!user.defaultWorkDays || !Array.isArray(user.defaultWorkDays) || user.defaultWorkDays.length === 0 ||
-            !user.requiredDaysPerWeek || user.requiredDaysPerWeek <= 0) {
-          logger.warn(`User ${user.id} has invalid preferences - skipping`);
-          results.skipped.push({
-            userId: user.id,
-            username: user.username,
-            reason: "Invalid preferences"
-          });
-          continue;
-        }
-        
-        // Run auto-booking for this user
-        const bookingResult = await bookingService.createAutoBookingsForUser(
-          user.id,
-          formattedDate,
-          req.userId // performed by admin
-        );
-        
-        if (bookingResult.success && bookingResult.success.length > 0) {
-          results.success.push({
-            userId: user.id,
-            username: user.username,
-            bookingsCreated: bookingResult.success.length
-          });
-        } else if (bookingResult.failed && bookingResult.failed.length > 0) {
-          results.failed.push({
-            userId: user.id,
-            username: user.username,
-            reason: bookingResult.failed[0].reason
-          });
-        } else {
-          results.skipped.push({
-            userId: user.id,
-            username: user.username,
-            reason: "No bookings created, possible existing bookings"
-          });
-        }
-      } catch (error) {
-        logger.error(`Error creating auto-bookings for user ${user.id}:`, error);
-        results.failed.push({
-          userId: user.id,
-          username: user.username,
-          reason: error.message
-        });
-      }
-    }
-    
-    logger.info(`Force auto-booking complete: ${results.success.length} successful, ${results.failed.length} failed, ${results.skipped.length} skipped`);
     
     return apiResponse.success(
       res,
       "Force auto-booking process completed",
-      {
-        successful: results.success.length,
-        failed: results.failed.length,
-        skipped: results.skipped.length,
-        details: results
-      }
+      formattedResult
     );
   } catch (error) {
     console.error('Error in forceAutoBookingForAll controller:', error);

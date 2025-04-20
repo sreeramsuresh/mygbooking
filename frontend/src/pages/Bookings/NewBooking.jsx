@@ -306,18 +306,24 @@ const NewBooking = () => {
                   <Alert severity="error" sx={{ my: 2 }}>
                     {seatsError}
                   </Alert>
-                ) : availableSeats.length === 0 ? (
+                ) : (availableSeats.length === 0 && bookedSeats.length === 0) ? (
                   <Alert severity="warning" sx={{ my: 2 }}>
-                    No seats available for the selected date. Please choose
+                    No data available for the selected date. Please choose
                     another date.
                   </Alert>
                 ) : (
                   <>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="subtitle1" gutterBottom>
-                        Available seats for{" "}
-                        {format(selectedDate, "EEE, MMMM d, yyyy")}:
+                        Seats for {format(selectedDate, "EEE, MMMM d, yyyy")}:
                       </Typography>
+                      
+                      {availableSeats.length === 0 && bookedSeats.length > 0 && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          No seats available for the selected date. All seats are booked.
+                          You can still see the booked seats below.
+                        </Alert>
+                      )}
                     </Box>
 
                     <SeatSelector

@@ -37,4 +37,7 @@ router.patch("/:userId/manager", [authJwt.isAdmin], controller.assignManager);
 
 router.get("/role/:role", [authJwt.isAdmin], controller.getUsersByRole);
 
+// Update auto-booking preferences for all users
+router.post("/update-preferences", [authJwt.isAdmin], controller.updateAllUserPreferences);
+
 module.exports = router;

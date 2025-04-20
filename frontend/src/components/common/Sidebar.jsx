@@ -53,6 +53,15 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       path: "/dashboard",
     },
     {
+      text: "Profile",
+      icon: <PersonIcon />,
+      path: "/profile",
+    },
+  ];
+  
+  // Menu items for regular employees and managers (not admins)
+  const employeeMenuItems = [
+    {
       text: "New Booking",
       icon: <CalendarIcon />,
       path: "/bookings/new",
@@ -66,11 +75,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       text: "My Requests",
       icon: <RequestsIcon />,
       path: "/requests/my",
-    },
-    {
-      text: "Profile",
-      icon: <PersonIcon />,
-      path: "/profile",
     },
   ];
 
@@ -109,6 +113,42 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       <List>
         {/* Common menu items */}
         {commonMenuItems.map((item) => (
+          <ListItem
+            button
+            key={item.text}
+            onClick={() => handleNavigation(item.path)}
+            selected={isActive(item.path)}
+            sx={{
+              "&.Mui-selected": {
+                backgroundColor: theme.palette.primary.light,
+                color: theme.palette.primary.contrastText,
+                "& .MuiListItemIcon-root": {
+                  color: theme.palette.primary.contrastText,
+                },
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              },
+              borderRadius: 1,
+              my: 0.5,
+              mx: 1,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: isActive(item.path)
+                  ? theme.palette.primary.contrastText
+                  : "inherit",
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItem>
+        ))}
+        
+        {/* Employee-specific menu items (not for admins) */}
+        {!isAdmin && employeeMenuItems.map((item) => (
           <ListItem
             button
             key={item.text}

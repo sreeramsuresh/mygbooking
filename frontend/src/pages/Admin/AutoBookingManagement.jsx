@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Button, Paper, CircularProgress, 
   Alert, AlertTitle, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Chip
+  TableContainer, TableHead, TableRow, Chip,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
 import axios from 'axios';
 import { API_URL } from '../../config';
@@ -11,8 +12,11 @@ const AutoBookingManagement = () => {
   const [loading, setLoading] = useState(false);
   const [debugData, setDebugData] = useState(null);
   const [forceResults, setForceResults] = useState(null);
+  const [prefResults, setPrefResults] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Load debug data on page load
   useEffect(() => {
@@ -39,14 +43,52 @@ const AutoBookingManagement = () => {
     }
   };
 
-  const triggerForceAutoBooking = async () => {
-    if (!window.confirm('Are you sure you want to force auto-booking for all users? This will create bookings for all eligible users.')) {
-      return;
+  const openConfirmDialog = (action) => {
+    setConfirmAction(action);
+    setConfirmDialogOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+  };
+
+  const getConfirmMessage = () => {
+    switch (confirmAction) {
+      case 'force-booking':
+        return 'Are you sure you want to force auto-booking for all users? This will create bookings for all eligible users.';
+      case 'update-preferences':
+        return 'Are you sure you want to update user preferences? This will set the work day preferences for all users based on the predefined list.';
+      case 'update-and-book':
+        return 'Are you sure you want to update user preferences AND run auto-booking? This will set the work day preferences for all users and then create bookings for them.';
+      default:
+        return 'Are you sure you want to continue?';
     }
+  };
+
+  const handleConfirm = async () => {
+    closeConfirmDialog();
     
+    switch (confirmAction) {
+      case 'force-booking':
+        await triggerForceAutoBooking();
+        break;
+      case 'update-preferences':
+        await updateUserPreferences(false);
+        break;
+      case 'update-and-book':
+        await updateUserPreferences(true);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const triggerForceAutoBooking = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setForceResults(null);
     
     try {
       const response = await axios.post(`${API_URL}/bookings/force-auto-booking`, {}, {
@@ -59,6 +101,39 @@ const AutoBookingManagement = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to force auto-booking');
       console.error('Error forcing auto-booking:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const updateUserPreferences = async (runAutoBooking = false) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    setPrefResults(null);
+    
+    try {
+      const response = await axios.post(`${API_URL}/users/update-preferences`, { 
+        runAutoBooking 
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      setPrefResults(response.data.data);
+      
+      if (runAutoBooking) {
+        setSuccess(`User preferences updated (${response.data.data.preferencesUpdated} success, ${response.data.data.preferencesFailed} failed) and auto-booking completed (${response.data.data.bookingsCreated} created, ${response.data.data.bookingsFailed} failed, ${response.data.data.bookingsSkipped} skipped)`);
+      } else {
+        setSuccess(`User preferences updated: ${response.data.data.updated} successful, ${response.data.data.failed} failed`);
+      }
+      
+      // Refresh the debug data
+      await fetchDebugData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update user preferences');
+      console.error('Error updating user preferences:', err);
     } finally {
       setLoading(false);
     }
@@ -95,7 +170,7 @@ const AutoBookingManagement = () => {
         <Typography variant="h6" gutterBottom>
           Actions
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <Button 
             variant="contained" 
             color="primary" 
@@ -108,13 +183,56 @@ const AutoBookingManagement = () => {
           <Button 
             variant="contained" 
             color="secondary" 
-            onClick={triggerForceAutoBooking}
+            onClick={() => openConfirmDialog('force-booking')}
             disabled={loading}
           >
             Force Auto-Booking for All Users
           </Button>
+          
+          <Button 
+            variant="contained" 
+            color="warning" 
+            onClick={() => openConfirmDialog('update-preferences')}
+            disabled={loading}
+          >
+            Update User Preferences
+          </Button>
+          
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={() => openConfirmDialog('update-and-book')}
+            disabled={loading}
+          >
+            Update Preferences & Run Auto-Booking
+          </Button>
         </Box>
+        
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Note: Admin users are excluded from auto-booking. Only regular employees and managers will receive auto-bookings.
+        </Alert>
       </Box>
+      
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={closeConfirmDialog}
+      >
+        <DialogTitle>Confirm Action</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {getConfirmMessage()}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeConfirmDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirm} color="secondary" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -187,6 +305,39 @@ const AutoBookingManagement = () => {
         </Box>
       )}
       
+      {prefResults && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            User Preference Update Results
+          </Typography>
+          
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Updated</Typography>
+                <Typography variant="h5" color="success.main">{prefResults.updated || prefResults.preferencesUpdated || 0}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Failed</Typography>
+                <Typography variant="h5" color="error.main">{prefResults.failed || prefResults.preferencesFailed || 0}</Typography>
+              </Box>
+              {prefResults.bookingsCreated !== undefined && (
+                <>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Bookings Created</Typography>
+                    <Typography variant="h5" color="success.main">{prefResults.bookingsCreated}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Bookings Failed</Typography>
+                    <Typography variant="h5" color="error.main">{prefResults.bookingsFailed}</Typography>
+                  </Box>
+                </>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      )}
+        
       {forceResults && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>

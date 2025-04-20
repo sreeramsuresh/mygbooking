@@ -30,7 +30,10 @@ const verifyToken = async (req, res, next) => {
     
     // Add user roles to request for easier access in controllers
     const roles = await user.getRoles();
-    req.userRoles = roles.map(role => `ROLE_${role.name.toUpperCase()}`);
+    req.userRoles = [
+      ...roles.map(role => role.name),
+      ...roles.map(role => `ROLE_${role.name.toUpperCase()}`)
+    ];
     
     next();
   } catch (err) {

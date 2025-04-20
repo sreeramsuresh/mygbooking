@@ -76,7 +76,7 @@ const App = () => {
         <Route
           path="/bookings/new"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute restrict="admin">
               <NewBooking />
             </ProtectedRoute>
           }
@@ -85,7 +85,7 @@ const App = () => {
         <Route
           path="/bookings/my"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute restrict="admin">
               <MyBookings />
             </ProtectedRoute>
           }
@@ -94,7 +94,7 @@ const App = () => {
         <Route
           path="/requests/regularization"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute restrict="admin">
               <RegularizationForm />
             </ProtectedRoute>
           }
@@ -103,7 +103,7 @@ const App = () => {
         <Route
           path="/requests/wfh"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute restrict="admin">
               <WFHRequestForm />
             </ProtectedRoute>
           }
@@ -112,7 +112,7 @@ const App = () => {
         <Route
           path="/requests/my"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute restrict="admin">
               <MyRequests />
             </ProtectedRoute>
           }

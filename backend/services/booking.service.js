@@ -337,14 +337,50 @@ const getAvailableSeats = async (date) => {
     
     if (allSeats.length === 0) {
       console.log('WARNING: No active seats found in the database!');
-      // Return an empty response with proper structure
-      return {
-        availableSeats: [],
-        bookedSeats: [],
-        totalSeats: 0,
-        bookedCount: 0,
-        availableCount: 0
-      };
+      // Even when no active seats, still check for bookings
+      // This allows us to see booked seats even if there are no "available" seats in the system
+      const bookings = await Booking.findAll({
+        where: {
+          bookingDate: date,
+          status: { [Op.ne]: "cancelled" },
+        },
+        include: [
+          {
+            model: User,
+            attributes: ["id", "fullName", "department"],
+          },
+        ],
+      });
+      
+      if (bookings.length > 0) {
+        // Format booked seats even when no active seats
+        const bookedSeatsInfo = bookings.map((booking) => ({
+          id: booking.seatId,
+          seatNumber: booking.seatId, // Use ID as number if seat doesn't exist
+          description: "Booked Seat",
+          isActive: true,
+          bookedBy: booking.user ? booking.user.fullName : "Unknown",
+          department: booking.user ? booking.user.department : null,
+          bookingId: booking.id,
+        }));
+        
+        return {
+          availableSeats: [],
+          bookedSeats: bookedSeatsInfo,
+          totalSeats: bookedSeatsInfo.length,
+          bookedCount: bookedSeatsInfo.length,
+          availableCount: 0
+        };
+      } else {
+        // Return an empty response with proper structure if no seats and no bookings
+        return {
+          availableSeats: [],
+          bookedSeats: [],
+          totalSeats: 0,
+          bookedCount: 0,
+          availableCount: 0
+        };
+      }
     }
 
     // Get booked seats for the date with user information
@@ -541,10 +577,48 @@ const getWeeklyAttendanceStatus = async (userId, year, weekNumber) => {
  */
 const createAutoBookings = async (weekStartDate, performedBy) => {
   try {
-    // Get all active users
+    // Find admin role to exclude admins from auto-booking
+    const Role = db.role;
+    const adminUserIds = [];
+    
+    try {
+      // Find admin role
+      const adminRole = await Role.findOne({
+        where: {
+          name: 'admin'
+        }
+      });
+      
+      if (adminRole) {
+        // Get the junction table that connects users and roles
+        const UserRoles = db.sequelize.models.user_roles || db.sequelize.models.userRoles;
+        
+        // Find admin users
+        const adminUserRoles = await UserRoles.findAll({
+          where: {
+            roleId: adminRole.id
+          }
+        });
+        
+        // Extract admin user IDs
+        adminUserRoles.forEach(ur => {
+          adminUserIds.push(ur.userId);
+        });
+        
+        console.log(`Excluding ${adminUserIds.length} admin users from auto-booking`);
+      }
+    } catch (roleError) {
+      console.error("Error finding admin users:", roleError);
+      // Continue with the process even if we can't identify admins
+    }
+    
+    // Get all active NON-ADMIN users
     const users = await User.findAll({
       where: {
         isActive: true,
+        id: {
+          [Op.notIn]: adminUserIds.length > 0 ? adminUserIds : [0] // Use [0] to avoid empty IN clause
+        }
       },
     });
 
@@ -858,8 +932,8 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
     // Skip the first week (week 1) to allow for manual overrides
     // Only auto-book weeks 2, 3, and 4
     
-    // Create bookings for weeks 2-4
-    for (let weekOffset = 1; weekOffset < 4; weekOffset++) {
+    // Create bookings for all weeks 1-4 (including the first week, contrary to what we discussed earlier)
+    for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
       const currentWeekStart = new Date(weekStart);
       currentWeekStart.setDate(currentWeekStart.getDate() + (weekOffset * 7));
       const currentWeekNumber = getWeekNumber(currentWeekStart);

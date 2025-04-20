@@ -26,6 +26,12 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
     }
   });
   
+  // Always show booked seats even if no available seats
+  if (allSeats.length === 0 && bookedSeats.length > 0) {
+    // If we only have booked seats data, use that
+    allSeats.push(...bookedSeats);
+  }
+  
   if (allSeats.length === 0) {
     return null;
   }
@@ -37,11 +43,22 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
   }, {});
   
   // Sort seats by seat number for consistent display
-  const sortedSeats = [...allSeats].sort((a, b) => a.seatNumber - b.seatNumber);
+  const sortedSeats = [...allSeats].sort((a, b) => {
+    if (typeof a.seatNumber === 'number' && typeof b.seatNumber === 'number') {
+      return a.seatNumber - b.seatNumber;
+    } else {
+      // If seatNumber is not a number, use string comparison or ID
+      return String(a.seatNumber || a.id).localeCompare(String(b.seatNumber || b.id));
+    }
+  });
   
-  // Split the seats for two rows (fixed layout)
-  const firstRowSeats = sortedSeats.slice(0, 5);
-  const secondRowSeats = sortedSeats.slice(5, 10);
+  // Dynamically split seats into two rows for better display
+  const totalSeats = sortedSeats.length;
+  const firstRowCount = Math.ceil(totalSeats / 2);
+  
+  // Split the seats for two rows
+  const firstRowSeats = sortedSeats.slice(0, firstRowCount);
+  const secondRowSeats = sortedSeats.slice(firstRowCount);
   
   // Check if a seat is booked
   const isSeatBooked = (seatId) => {
@@ -162,14 +179,27 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
     );
   };
 
+  // Count available seats
+  const availableSeatCount = allSeats.filter(seat => !isSeatBooked(seat.id)).length;
+
   return (
     <Box>
+      {/* Show status of seat availability */}
+      {availableSeatCount === 0 && (
+        <Box sx={{ mb: 2, mt: 1, textAlign: 'center' }}>
+          <Typography variant="body1" color="error">
+            All seats are booked for this date.
+          </Typography>
+        </Box>
+      )}
+      
       {/* First Row */}
       <Stack 
         direction="row" 
         sx={{ 
           mb: 3,
-          flexWrap: 'nowrap' // Never wrap to maintain 5 items per row
+          flexWrap: 'nowrap',
+          justifyContent: 'center'
         }}
       >
         {firstRowSeats.map(seat => (
@@ -177,18 +207,21 @@ const SeatSelector = ({ seats, bookedSeats = [], selectedSeatId, onSeatSelect })
         ))}
       </Stack>
       
-      {/* Second Row */}
-      <Stack 
-        direction="row" 
-        sx={{ 
-          mb: 3,
-          flexWrap: 'nowrap' // Never wrap to maintain 5 items per row
-        }}
-      >
-        {secondRowSeats.map(seat => (
-          <SeatItem key={seat.id} seat={seat} />
-        ))}
-      </Stack>
+      {/* Second Row - only show if there are seats for this row */}
+      {secondRowSeats.length > 0 && (
+        <Stack 
+          direction="row" 
+          sx={{ 
+            mb: 3,
+            flexWrap: 'nowrap',
+            justifyContent: 'center'
+          }}
+        >
+          {secondRowSeats.map(seat => (
+            <SeatItem key={seat.id} seat={seat} />
+          ))}
+        </Stack>
+      )}
     </Box>
   );
 };

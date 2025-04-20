@@ -48,20 +48,7 @@ const bookingService = {
 
   getMyBookings: async (filters = {}) => {
     try {
-      // Try to ensure auto-bookings are created first
-      try {
-        console.log("Checking auto-booking status...");
-        const autobookResponse = await axios.post(`${API_ENDPOINT}/ensure-auto-bookings`);
-        console.log("Auto-booking check result:", autobookResponse.data);
-        
-        // Small delay to allow backend to complete any booking operations
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (autoBookError) {
-        // Non-critical error, continue with fetching bookings
-        console.error("Failed to check auto-bookings:", autoBookError);
-      }
-      
-      // Then fetch the bookings
+      // Fetch the bookings
       const response = await axios.get(`${API_ENDPOINT}/my`, {
         params: filters,
       });
