@@ -1795,3 +1795,225 @@
 2025-04-20T09:18:41.979Z info: User 4 has existing booking on 2025-05-14
 2025-04-20T09:18:41.979Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
 2025-04-20T09:18:41.980Z info: Initial auto-booking process completed successfully
+2025-04-20T09:21:32.185Z info: Checking database structure...
+2025-04-20T09:21:33.182Z info: Database synchronized successfully.
+2025-04-20T09:21:33.189Z info: Roles already exist, skipping seed.
+2025-04-20T09:21:33.219Z info: Users already exist, skipping admin user creation.
+2025-04-20T09:21:33.236Z info: Seats already exist, skipping seat creation.
+2025-04-20T09:21:33.244Z info: All users have valid auto-booking preferences
+2025-04-20T09:21:33.245Z info: Database initialization completed successfully.
+2025-04-20T09:21:33.251Z info: Scheduler initialized successfully
+2025-04-20T09:21:33.254Z info: Server is running on port 8080
+2025-04-20T09:21:43.262Z info: Running initial auto-booking process at startup
+2025-04-20T09:21:43.263Z info: Starting auto-booking process for all users
+2025-04-20T09:21:43.267Z info: Found 1 admin users to exclude from auto-booking
+2025-04-20T09:21:43.270Z info: Found 18 active users to process
+2025-04-20T09:21:43.270Z info: Processing user 2 (sree)
+2025-04-20T09:21:43.270Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.271Z info: Checking existing bookings for user 2 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.276Z info: User 2 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.277Z info: User 2 has existing booking on 2025-04-28
+2025-04-20T09:21:43.277Z info: User 2 has existing booking on 2025-04-29
+2025-04-20T09:21:43.277Z info: User 2 has existing booking on 2025-05-05
+2025-04-20T09:21:43.278Z info: User 2 has existing booking on 2025-05-06
+2025-04-20T09:21:43.278Z info: User 2 has existing booking on 2025-05-12
+2025-04-20T09:21:43.278Z info: User 2 has existing booking on 2025-05-13
+2025-04-20T09:21:43.278Z info: Processing user 11 (rishu.singh)
+2025-04-20T09:21:43.279Z info: User preferences - defaultWorkDays: [2,4], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.279Z info: Checking existing bookings for user 11 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.282Z info: User 11 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.282Z info: User 11 has existing booking on 2025-04-29
+2025-04-20T09:21:43.283Z info: User 11 has existing booking on 2025-05-01
+2025-04-20T09:21:43.283Z info: User 11 has existing booking on 2025-05-06
+2025-04-20T09:21:43.283Z info: User 11 has existing booking on 2025-05-08
+2025-04-20T09:21:43.283Z info: User 11 has existing booking on 2025-05-13
+2025-04-20T09:21:43.284Z info: User 11 has existing booking on 2025-05-15
+2025-04-20T09:21:43.284Z info: Processing user 5 (Anand)
+2025-04-20T09:21:43.284Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.284Z info: Checking existing bookings for user 5 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.288Z info: User 5 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.289Z info: User 5 has existing booking on 2025-04-28
+2025-04-20T09:21:43.289Z info: User 5 has existing booking on 2025-05-02
+2025-04-20T09:21:43.289Z info: User 5 has existing booking on 2025-05-05
+2025-04-20T09:21:43.290Z info: User 5 has existing booking on 2025-05-09
+2025-04-20T09:21:43.290Z info: User 5 has existing booking on 2025-05-12
+2025-04-20T09:21:43.290Z info: User 5 has existing booking on 2025-05-16
+2025-04-20T09:21:43.290Z info: Processing user 12 (sagar.rao)
+2025-04-20T09:21:43.291Z info: User preferences - defaultWorkDays: [3,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.291Z info: Checking existing bookings for user 12 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.294Z info: User 12 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.294Z info: User 12 has existing booking on 2025-04-30
+2025-04-20T09:21:43.295Z info: User 12 has existing booking on 2025-05-02
+2025-04-20T09:21:43.295Z info: User 12 has existing booking on 2025-05-07
+2025-04-20T09:21:43.295Z info: User 12 has existing booking on 2025-05-09
+2025-04-20T09:21:43.295Z info: User 12 has existing booking on 2025-05-14
+2025-04-20T09:21:43.296Z info: User 12 has existing booking on 2025-05-16
+2025-04-20T09:21:43.296Z info: Processing user 13 (sarath.h)
+2025-04-20T09:21:43.296Z info: User preferences - defaultWorkDays: [2,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.296Z info: Checking existing bookings for user 13 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.300Z info: User 13 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.300Z info: User 13 has existing booking on 2025-04-29
+2025-04-20T09:21:43.300Z info: User 13 has existing booking on 2025-05-02
+2025-04-20T09:21:43.301Z info: User 13 has existing booking on 2025-05-06
+2025-04-20T09:21:43.301Z info: User 13 has existing booking on 2025-05-09
+2025-04-20T09:21:43.301Z info: User 13 has existing booking on 2025-05-13
+2025-04-20T09:21:43.301Z info: User 13 has existing booking on 2025-05-16
+2025-04-20T09:21:43.302Z info: Processing user 14 (shejo.j)
+2025-04-20T09:21:43.302Z info: User preferences - defaultWorkDays: [1,3], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.302Z info: Checking existing bookings for user 14 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.306Z info: User 14 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.306Z info: User 14 has existing booking on 2025-04-28
+2025-04-20T09:21:43.306Z info: User 14 has existing booking on 2025-04-30
+2025-04-20T09:21:43.306Z info: User 14 has existing booking on 2025-05-05
+2025-04-20T09:21:43.307Z info: User 14 has existing booking on 2025-05-07
+2025-04-20T09:21:43.307Z info: User 14 has existing booking on 2025-05-12
+2025-04-20T09:21:43.307Z info: User 14 has existing booking on 2025-05-14
+2025-04-20T09:21:43.307Z info: Processing user 15 (sreelekshmi.s)
+2025-04-20T09:21:43.308Z info: User preferences - defaultWorkDays: [1,4], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.308Z info: Checking existing bookings for user 15 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.312Z info: User 15 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.312Z info: User 15 has existing booking on 2025-04-28
+2025-04-20T09:21:43.313Z info: User 15 has existing booking on 2025-05-01
+2025-04-20T09:21:43.313Z info: User 15 has existing booking on 2025-05-05
+2025-04-20T09:21:43.313Z info: User 15 has existing booking on 2025-05-08
+2025-04-20T09:21:43.313Z info: User 15 has existing booking on 2025-05-12
+2025-04-20T09:21:43.314Z info: User 15 has existing booking on 2025-05-15
+2025-04-20T09:21:43.314Z info: Processing user 16 (sreeram.s)
+2025-04-20T09:21:43.314Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-04-20T09:21:43.314Z info: Checking existing bookings for user 16 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.318Z info: User 16 already has 15 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.318Z info: User 16 has existing booking on 2025-04-28
+2025-04-20T09:21:43.319Z info: User 16 has existing booking on 2025-04-29
+2025-04-20T09:21:43.319Z info: User 16 has existing booking on 2025-04-30
+2025-04-20T09:21:43.319Z info: User 16 has existing booking on 2025-05-01
+2025-04-20T09:21:43.320Z info: User 16 has existing booking on 2025-05-02
+2025-04-20T09:21:43.320Z info: User 16 has existing booking on 2025-05-05
+2025-04-20T09:21:43.320Z info: User 16 has existing booking on 2025-05-06
+2025-04-20T09:21:43.320Z info: User 16 has existing booking on 2025-05-07
+2025-04-20T09:21:43.321Z info: User 16 has existing booking on 2025-05-08
+2025-04-20T09:21:43.321Z info: User 16 has existing booking on 2025-05-09
+2025-04-20T09:21:43.321Z info: User 16 has existing booking on 2025-05-12
+2025-04-20T09:21:43.321Z info: User 16 has existing booking on 2025-05-13
+2025-04-20T09:21:43.322Z info: User 16 has existing booking on 2025-05-14
+2025-04-20T09:21:43.322Z info: User 16 has existing booking on 2025-05-15
+2025-04-20T09:21:43.322Z info: User 16 has existing booking on 2025-05-16
+2025-04-20T09:21:43.322Z info: Processing user 6 (arjun)
+2025-04-20T09:21:43.323Z info: User preferences - defaultWorkDays: [2,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.323Z info: Checking existing bookings for user 6 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.326Z info: User 6 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.327Z info: User 6 has existing booking on 2025-04-29
+2025-04-20T09:21:43.327Z info: User 6 has existing booking on 2025-05-02
+2025-04-20T09:21:43.327Z info: User 6 has existing booking on 2025-05-06
+2025-04-20T09:21:43.327Z info: User 6 has existing booking on 2025-05-09
+2025-04-20T09:21:43.328Z info: User 6 has existing booking on 2025-05-13
+2025-04-20T09:21:43.328Z info: User 6 has existing booking on 2025-05-16
+2025-04-20T09:21:43.328Z info: Processing user 7 (hemanth.k)
+2025-04-20T09:21:43.328Z info: User preferences - defaultWorkDays: [1,4], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.329Z info: Checking existing bookings for user 7 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.332Z info: User 7 already has 10 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.333Z info: User 7 has existing booking on 2025-04-28
+2025-04-20T09:21:43.333Z info: User 7 has existing booking on 2025-04-28
+2025-04-20T09:21:43.333Z info: User 7 has existing booking on 2025-05-01
+2025-04-20T09:21:43.334Z info: User 7 has existing booking on 2025-05-01
+2025-04-20T09:21:43.334Z info: User 7 has existing booking on 2025-05-05
+2025-04-20T09:21:43.334Z info: User 7 has existing booking on 2025-05-05
+2025-04-20T09:21:43.334Z info: User 7 has existing booking on 2025-05-08
+2025-04-20T09:21:43.335Z info: User 7 has existing booking on 2025-05-12
+2025-04-20T09:21:43.335Z info: User 7 has existing booking on 2025-05-12
+2025-04-20T09:21:43.335Z info: User 7 has existing booking on 2025-05-15
+2025-04-20T09:21:43.335Z info: Processing user 8 (muthukumar.s)
+2025-04-20T09:21:43.336Z info: User preferences - defaultWorkDays: [3,4], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.336Z info: Checking existing bookings for user 8 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.340Z info: User 8 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.340Z info: User 8 has existing booking on 2025-04-30
+2025-04-20T09:21:43.340Z info: User 8 has existing booking on 2025-05-01
+2025-04-20T09:21:43.341Z info: User 8 has existing booking on 2025-05-07
+2025-04-20T09:21:43.341Z info: User 8 has existing booking on 2025-05-08
+2025-04-20T09:21:43.341Z info: User 8 has existing booking on 2025-05-14
+2025-04-20T09:21:43.342Z info: User 8 has existing booking on 2025-05-15
+2025-04-20T09:21:43.342Z info: Processing user 9 (prashi.jaiswal)
+2025-04-20T09:21:43.342Z info: User preferences - defaultWorkDays: [3,2], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.342Z info: Checking existing bookings for user 9 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.345Z info: User 9 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.346Z info: User 9 has existing booking on 2025-04-29
+2025-04-20T09:21:43.346Z info: User 9 has existing booking on 2025-04-30
+2025-04-20T09:21:43.346Z info: User 9 has existing booking on 2025-05-06
+2025-04-20T09:21:43.347Z info: User 9 has existing booking on 2025-05-07
+2025-04-20T09:21:43.347Z info: User 9 has existing booking on 2025-05-13
+2025-04-20T09:21:43.347Z info: User 9 has existing booking on 2025-05-14
+2025-04-20T09:21:43.347Z info: Processing user 10 (m.roshan)
+2025-04-20T09:21:43.348Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-04-20T09:21:43.348Z info: Checking existing bookings for user 10 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.351Z info: User 10 already has 11 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.352Z info: User 10 has existing booking on 2025-04-28
+2025-04-20T09:21:43.352Z info: User 10 has existing booking on 2025-04-30
+2025-04-20T09:21:43.352Z info: User 10 has existing booking on 2025-05-01
+2025-04-20T09:21:43.353Z info: User 10 has existing booking on 2025-05-02
+2025-04-20T09:21:43.353Z info: User 10 has existing booking on 2025-05-07
+2025-04-20T09:21:43.353Z info: User 10 has existing booking on 2025-05-08
+2025-04-20T09:21:43.353Z info: User 10 has existing booking on 2025-05-09
+2025-04-20T09:21:43.354Z info: User 10 has existing booking on 2025-05-13
+2025-04-20T09:21:43.354Z info: User 10 has existing booking on 2025-05-14
+2025-04-20T09:21:43.354Z info: User 10 has existing booking on 2025-05-15
+2025-04-20T09:21:43.354Z info: User 10 has existing booking on 2025-05-16
+2025-04-20T09:21:43.355Z info: Processing user 18 (vinod.v)
+2025-04-20T09:21:43.355Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.355Z info: Checking existing bookings for user 18 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.359Z info: User 18 already has 3 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.360Z info: User 18 has existing booking on 2025-05-02
+2025-04-20T09:21:43.360Z info: User 18 has existing booking on 2025-05-09
+2025-04-20T09:21:43.360Z info: User 18 has existing booking on 2025-05-16
+2025-04-20T09:21:43.361Z info: Processing user 19 (shravani.bs)
+2025-04-20T09:21:43.361Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.361Z info: Checking existing bookings for user 19 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.364Z info: User 19 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.365Z info: User 19 has existing booking on 2025-05-01
+2025-04-20T09:21:43.365Z info: User 19 has existing booking on 2025-05-02
+2025-04-20T09:21:43.365Z info: User 19 has existing booking on 2025-05-08
+2025-04-20T09:21:43.366Z info: User 19 has existing booking on 2025-05-09
+2025-04-20T09:21:43.366Z info: User 19 has existing booking on 2025-05-15
+2025-04-20T09:21:43.366Z info: User 19 has existing booking on 2025-05-16
+2025-04-20T09:21:43.366Z info: Processing user 17 (sukesh)
+2025-04-20T09:21:43.367Z info: User preferences - defaultWorkDays: [2,3,4,1], requiredDaysPerWeek: 4
+2025-04-20T09:21:43.367Z info: Checking existing bookings for user 17 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.371Z info: User 17 already has 6 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.371Z info: User 17 has existing booking on 2025-04-30
+2025-04-20T09:21:43.371Z info: User 17 has existing booking on 2025-05-01
+2025-04-20T09:21:43.372Z info: User 17 has existing booking on 2025-05-07
+2025-04-20T09:21:43.372Z info: User 17 has existing booking on 2025-05-08
+2025-04-20T09:21:43.372Z info: User 17 has existing booking on 2025-05-14
+2025-04-20T09:21:43.372Z info: User 17 has existing booking on 2025-05-15
+2025-04-20T09:21:43.373Z info: Processing user 3 (test)
+2025-04-20T09:21:43.373Z info: User preferences - defaultWorkDays: [1,2], requiredDaysPerWeek: 2
+2025-04-20T09:21:43.373Z info: Checking existing bookings for user 3 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.377Z info: User 3 already has 11 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.377Z info: User 3 has existing booking on 2025-04-28
+2025-04-20T09:21:43.377Z info: User 3 has existing booking on 2025-04-28
+2025-04-20T09:21:43.378Z info: User 3 has existing booking on 2025-04-29
+2025-04-20T09:21:43.378Z info: User 3 has existing booking on 2025-04-29
+2025-04-20T09:21:43.378Z info: User 3 has existing booking on 2025-05-05
+2025-04-20T09:21:43.379Z info: User 3 has existing booking on 2025-05-05
+2025-04-20T09:21:43.379Z info: User 3 has existing booking on 2025-05-06
+2025-04-20T09:21:43.379Z info: User 3 has existing booking on 2025-05-06
+2025-04-20T09:21:43.379Z info: User 3 has existing booking on 2025-05-12
+2025-04-20T09:21:43.380Z info: User 3 has existing booking on 2025-05-13
+2025-04-20T09:21:43.380Z info: User 3 has existing booking on 2025-05-13
+2025-04-20T09:21:43.380Z info: Processing user 4 (amith)
+2025-04-20T09:21:43.381Z info: User preferences - defaultWorkDays: [1,2,3], requiredDaysPerWeek: 3
+2025-04-20T09:21:43.381Z info: Checking existing bookings for user 4 from 2025-04-28 to 2025-05-18
+2025-04-20T09:21:43.385Z info: User 4 already has 13 future bookings between 2025-04-28 and 2025-05-18 - skipping
+2025-04-20T09:21:43.385Z info: User 4 has existing booking on 2025-04-28
+2025-04-20T09:21:43.386Z info: User 4 has existing booking on 2025-04-28
+2025-04-20T09:21:43.386Z info: User 4 has existing booking on 2025-04-29
+2025-04-20T09:21:43.386Z info: User 4 has existing booking on 2025-04-29
+2025-04-20T09:21:43.386Z info: User 4 has existing booking on 2025-04-30
+2025-04-20T09:21:43.387Z info: User 4 has existing booking on 2025-05-05
+2025-04-20T09:21:43.387Z info: User 4 has existing booking on 2025-05-06
+2025-04-20T09:21:43.387Z info: User 4 has existing booking on 2025-05-07
+2025-04-20T09:21:43.388Z info: User 4 has existing booking on 2025-05-07
+2025-04-20T09:21:43.388Z info: User 4 has existing booking on 2025-05-12
+2025-04-20T09:21:43.388Z info: User 4 has existing booking on 2025-05-13
+2025-04-20T09:21:43.388Z info: User 4 has existing booking on 2025-05-14
+2025-04-20T09:21:43.389Z info: User 4 has existing booking on 2025-05-14
+2025-04-20T09:21:43.389Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-04-20T09:21:43.389Z info: Initial auto-booking process completed successfully
