@@ -17,6 +17,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Chip,
+  FormHelperText,
 } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Visibility from "@mui/icons-material/Visibility";
@@ -31,6 +36,8 @@ const Register = () => {
     confirmPassword: "",
     fullName: "",
     department: "",
+    defaultWorkDays: [1, 2, 3, 4, 5], // Default to weekdays (Monday-Friday)
+    requiredDaysPerWeek: 2,
   });
 
   const [error, setError] = useState("");
@@ -145,6 +152,45 @@ const Register = () => {
     "Customer Support",
     "Other",
   ];
+  
+  // Days of the week
+  const daysOfWeek = [
+    { value: 1, label: "Monday" },
+    { value: 2, label: "Tuesday" },
+    { value: 3, label: "Wednesday" },
+    { value: 4, label: "Thursday" },
+    { value: 5, label: "Friday" }
+  ];
+  
+  const handleWorkDayChange = (dayValue) => {
+    setFormData((prevData) => {
+      // Check if day is already selected
+      if (prevData.defaultWorkDays.includes(dayValue)) {
+        // Remove day if already selected and not going below min required days
+        if (prevData.defaultWorkDays.length > prevData.requiredDaysPerWeek) {
+          return {
+            ...prevData,
+            defaultWorkDays: prevData.defaultWorkDays.filter(day => day !== dayValue)
+          };
+        }
+        return prevData; // Don't allow going below required days
+      } else {
+        // Add day if not already selected
+        return {
+          ...prevData,
+          defaultWorkDays: [...prevData.defaultWorkDays, dayValue].sort()
+        };
+      }
+    });
+  };
+  
+  const handleRequiredDaysChange = (e) => {
+    const newRequiredDays = parseInt(e.target.value, 10);
+    setFormData((prevData) => ({
+      ...prevData,
+      requiredDaysPerWeek: newRequiredDays
+    }));
+  };
 
   return (
     <Container maxWidth="md">
@@ -290,6 +336,49 @@ const Register = () => {
                       </MenuItem>
                     ))}
                   </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Default Office Days
+                </Typography>
+                <FormHelperText sx={{ mt: -1, mb: 1 }}>
+                  Select your preferred days to come to the office (min {formData.requiredDaysPerWeek} days). 
+                  We'll automatically book you on these days every week.
+                </FormHelperText>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                  {daysOfWeek.map((day) => (
+                    <Chip
+                      key={day.value}
+                      label={day.label}
+                      onClick={() => handleWorkDayChange(day.value)}
+                      color={formData.defaultWorkDays.includes(day.value) ? "primary" : "default"}
+                      sx={{ cursor: "pointer" }}
+                      disabled={isSubmitting}
+                    />
+                  ))}
+                </Box>
+                
+                <FormControl fullWidth sx={{ mt: 2 }}>
+                  <InputLabel id="required-days-label">Required Days Per Week</InputLabel>
+                  <Select
+                    labelId="required-days-label"
+                    id="requiredDaysPerWeek"
+                    value={formData.requiredDaysPerWeek}
+                    onChange={handleRequiredDaysChange}
+                    label="Required Days Per Week"
+                    disabled={isSubmitting}
+                  >
+                    <MenuItem value={1}>1 day</MenuItem>
+                    <MenuItem value={2}>2 days</MenuItem>
+                    <MenuItem value={3}>3 days</MenuItem>
+                    <MenuItem value={4}>4 days</MenuItem>
+                    <MenuItem value={5}>5 days</MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    Your organization requires you to be in the office this many days per week
+                  </FormHelperText>
                 </FormControl>
               </Grid>
             </Grid>

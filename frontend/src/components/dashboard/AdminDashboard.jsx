@@ -46,6 +46,21 @@ import AutorenewIcon from "@mui/icons-material/Autorenew";
 
 import dashboardService from "../../services/dashboardService";
 import bookingService from "../../services/bookingService";
+import userService from "../../services/userService";
+import { 
+  FormControl, 
+  InputLabel, 
+  MenuItem, 
+  Select, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions,
+  TextField 
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -54,6 +69,13 @@ const AdminDashboard = () => {
   const [creatingAutoBookings, setCreatingAutoBookings] = useState(false);
   const [autoBookingResult, setAutoBookingResult] = useState(null);
   const [autoBookingError, setAutoBookingError] = useState(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState("");
+  const [resetDate, setResetDate] = useState(new Date());
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetResult, setResetResult] = useState(null);
+  const [userList, setUserList] = useState([]);
 
   const fetchDashboard = async () => {
     try {
@@ -75,14 +97,68 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await userService.getAllUsers();
+      if (response.success) {
+        setUserList(response.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+  };
+
   useEffect(() => {
     fetchDashboard();
+    fetchUsers();
 
     // Refresh dashboard every 5 minutes
     const interval = setInterval(fetchDashboard, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
+  
+  const handleOpenResetDialog = () => {
+    setSelectedUser("");
+    setResetDate(new Date());
+    setResetError("");
+    setResetResult(null);
+    setResetDialogOpen(true);
+  };
+  
+  const handleCloseResetDialog = () => {
+    setResetDialogOpen(false);
+  };
+  
+  const handleResetAndAutoBook = async () => {
+    if (!selectedUser) {
+      setResetError("Please select a user");
+      return;
+    }
+    
+    try {
+      setIsResetting(true);
+      setResetError("");
+      
+      const formattedDate = resetDate.toISOString().split("T")[0];
+      const response = await bookingService.resetAndAutoBook(selectedUser, formattedDate);
+      
+      if (response.success) {
+        setResetResult(response.data);
+        // Refresh dashboard data after a short delay
+        setTimeout(() => {
+          fetchDashboard();
+        }, 1000);
+      } else {
+        setResetError(response.message || "Failed to reset and auto-book");
+      }
+    } catch (err) {
+      setResetError("An error occurred while resetting bookings");
+      console.error("Reset error:", err);
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleCreateAutoBookings = async () => {
     try {
@@ -191,21 +267,6 @@ const AdminDashboard = () => {
             </IconButton>
           </Tooltip>
 
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleCreateAutoBookings}
-            disabled={creatingAutoBookings}
-            startIcon={
-              creatingAutoBookings ? (
-                <CircularProgress size={20} />
-              ) : (
-                <AutorenewIcon />
-              )
-            }
-          >
-            {creatingAutoBookings ? "Creating..." : "Create Auto Bookings"}
-          </Button>
         </Box>
       </Box>
 
@@ -529,29 +590,12 @@ const AdminDashboard = () => {
                     Manage Requests
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleCreateAutoBookings}
-                    disabled={creatingAutoBookings}
-                    startIcon={
-                      creatingAutoBookings ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <AutorenewIcon />
-                      )
-                    }
-                  >
-                    Auto Bookings
-                  </Button>
-                </Grid>
               </Grid>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+      
     </Container>
   );
 };

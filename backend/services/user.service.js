@@ -5,6 +5,7 @@ const User = db.user;
 const Role = db.role;
 const AuditLog = db.auditLog;
 const { Op } = db.Sequelize;
+const bookingService = require("./booking.service");
 
 /**
  * Get all users with their roles
@@ -258,6 +259,17 @@ const updateUser = async (userId, updates, performedBy = null) => {
           roles: updates.roles,
         },
       });
+    }
+    
+    // Log if defaultWorkDays or requiredDaysPerWeek changed
+    if (
+      (updates.defaultWorkDays && JSON.stringify(updates.defaultWorkDays) !== JSON.stringify(oldValues.defaultWorkDays)) ||
+      (updates.requiredDaysPerWeek !== undefined && updates.requiredDaysPerWeek !== oldValues.requiredDaysPerWeek)
+    ) {
+      console.log(`User ${userId} settings changed - defaultWorkDays: ${JSON.stringify(updates.defaultWorkDays)}, requiredDaysPerWeek: ${updates.requiredDaysPerWeek}`);
+      console.log(`NOTE: Auto-booking must be manually triggered by an admin`);
+      
+      // Admin must manually trigger auto-booking
     }
 
     // Return updated user data

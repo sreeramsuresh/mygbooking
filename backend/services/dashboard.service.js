@@ -47,25 +47,28 @@ const getEmployeeDashboard = async (userId) => {
       ],
     });
 
-    // Get upcoming bookings for the current week
+    // Get upcoming bookings for the current and next 3 weeks (4 weeks total)
     const startOfWeek = new Date(today);
     startOfWeek.setDate(
       today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)
     ); // Monday
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
-    endOfWeek.setHours(23, 59, 59, 999);
+    const endOfFourWeeks = new Date(startOfWeek);
+    endOfFourWeeks.setDate(startOfWeek.getDate() + (6 + 21)); // Current week Sunday + 3 more weeks
+    endOfFourWeeks.setHours(23, 59, 59, 999);
 
     const formattedStartOfWeek = startOfWeek.toISOString().split("T")[0];
-    const formattedEndOfWeek = endOfWeek.toISOString().split("T")[0];
+    const formattedEndOfFourWeeks = endOfFourWeeks.toISOString().split("T")[0];
 
+    console.log(`Fetching bookings from ${formattedStartOfWeek} to ${formattedEndOfFourWeeks} for user ${userId}`);
+
+    // Get actual bookings
     const upcomingBookings = await Booking.findAll({
       where: {
         userId,
         bookingDate: {
-          [Op.between]: [formattedStartOfWeek, formattedEndOfWeek],
+          [Op.between]: [formattedStartOfWeek, formattedEndOfFourWeeks],
         },
         bookingDate: {
           [Op.gt]: formattedToday,
@@ -80,8 +83,10 @@ const getEmployeeDashboard = async (userId) => {
       ],
       order: [["bookingDate", "ASC"]],
     });
-
-    // Get pending requests
+    
+    console.log(`Found ${upcomingBookings.length} upcoming bookings`);
+    
+    // Get pending requests before any potential early return
     const pendingRequests = await Request.findAll({
       where: {
         userId,
@@ -97,7 +102,7 @@ const getEmployeeDashboard = async (userId) => {
       where: {
         userId,
         bookingDate: {
-          [Op.between]: [formattedStartOfWeek, formattedEndOfWeek],
+          [Op.between]: [formattedStartOfWeek, formattedEndOfFourWeeks],
         },
         status: "confirmed",
         [Op.or]: [
@@ -108,6 +113,73 @@ const getEmployeeDashboard = async (userId) => {
     });
 
     const remainingDays = Math.max(0, requiredDays - bookedDays);
+    
+    // If no bookings found, suggest bookings based on user preferences
+    if (upcomingBookings.length === 0) {
+      console.log(`No bookings found for user ${userId}. Suggesting slots based on preferences.`);
+      
+      // Get user preferences
+      const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays (1=Monday)
+      const requiredDaysPerWeek = user.requiredDaysPerWeek || 2;
+      
+      // Use only required number of days
+      const daysToShow = defaultWorkDays.slice(0, requiredDaysPerWeek);
+      
+      console.log(`User preferred days: ${JSON.stringify(daysToShow)}`);
+      
+      // Generate suggested booking dates for 4 weeks
+      const suggestedBookings = [];
+      
+      for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
+        const currentWeekStart = new Date(startOfWeek);
+        currentWeekStart.setDate(currentWeekStart.getDate() + (weekOffset * 7));
+        
+        for (const dayOfWeek of daysToShow) {
+          const bookingDate = new Date(currentWeekStart);
+          bookingDate.setDate(
+            currentWeekStart.getDate() + ((dayOfWeek - currentWeekStart.getDay() + 7) % 7)
+          );
+          
+          // Skip dates in the past
+          if (bookingDate <= today) continue;
+          
+          // Format date for display
+          const formattedDate = bookingDate.toISOString().split("T")[0];
+          
+          // Add this as a suggested booking
+          suggestedBookings.push({
+            suggestedDate: formattedDate,
+            dayOfWeek: dayOfWeek,
+            isSuggested: true, // Flag to identify suggestions vs. actual bookings
+            status: "suggested", // To differentiate in UI
+          });
+        }
+      }
+      
+      console.log(`Generated ${suggestedBookings.length} suggested booking slots`);
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          department: user.department,
+          defaultWorkDays: user.defaultWorkDays,
+          requiredDaysPerWeek: user.requiredDaysPerWeek,
+        },
+        weeklyStatus,
+        todayBooking,
+        upcomingBookings: [], // Real bookings
+        suggestedBookings, // Suggested bookings based on preferences
+        pendingRequests,
+        remainingDays,
+        currentWeek: {
+          startDate: formattedStartOfWeek,
+          endDate: formattedEndOfFourWeeks,
+          weekNumber: currentWeekNumber,
+        },
+      };
+    }
+
 
     return {
       user: {
@@ -125,7 +197,7 @@ const getEmployeeDashboard = async (userId) => {
       remainingDays,
       currentWeek: {
         startDate: formattedStartOfWeek,
-        endDate: formattedEndOfWeek,
+        endDate: formattedEndOfFourWeeks,
         weekNumber: currentWeekNumber,
       },
     };

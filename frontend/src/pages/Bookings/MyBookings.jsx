@@ -25,34 +25,63 @@ import {
   DialogActions,
   TextField,
   Breadcrumbs,
+  Divider,
+  Grid,
 } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import EditIcon from "@mui/icons-material/Edit";
 import EventSeatIcon from "@mui/icons-material/EventSeat";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import AccessTimeFilledIcon from "@mui/icons-material/AccessTimeFilled";
 import HomeIcon from "@mui/icons-material/Home";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import { format, isAfter, isBefore, startOfToday } from "date-fns";
+import { format, isAfter, isBefore, startOfToday, addDays } from "date-fns";
 import useBookings from "../../hooks/useBookings";
+import SeatSelector from "../../components/booking/SeatSelector";
+import BookingCalendar from "../../components/booking/BookingCalendar";
 
 const MyBookings = () => {
-  const { myBookings, loading, error, fetchMyBookings, cancelBooking } =
-    useBookings();
+  const { 
+    myBookings, 
+    loading, 
+    error, 
+    fetchMyBookings, 
+    cancelBooking, 
+    updateBooking, 
+    getAvailableSeats,
+    resetAndAutoBook
+  } = useBookings();
+  
   const navigate = useNavigate();
 
   const [tabValue, setTabValue] = useState(0);
   const [filteredBookings, setFilteredBookings] = useState([]);
-  const [cancelDialogOpen, setcancelDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [editSeatDialogOpen, setEditSeatDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [isLoadingSeats, setIsLoadingSeats] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState([]);
+  const [bookedSeats, setBookedSeats] = useState([]);
+  const [selectedSeatId, setSelectedSeatId] = useState("");
+  const [selectedBookingDate, setSelectedBookingDate] = useState("");
+  const [isDateChanging, setIsDateChanging] = useState(false);
+  const [seatsError, setSeatsError] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState("");
 
   useEffect(() => {
+    console.log("Fetching bookings...");
     fetchMyBookings();
   }, [fetchMyBookings]);
 
@@ -66,11 +95,11 @@ const MyBookings = () => {
     const today = startOfToday();
 
     if (tabValue === 0) {
-      // Upcoming
+      // Upcoming (including suggested)
       setFilteredBookings(
         myBookings.filter(
           (booking) =>
-            booking.status !== "cancelled" &&
+            (booking.status !== "cancelled" || booking.status === "suggested") &&
             !isBefore(new Date(booking.bookingDate), today)
         )
       );
@@ -99,14 +128,133 @@ const MyBookings = () => {
     setSelectedBooking(booking);
     setCancelReason("");
     setCancelError("");
-    setcancelDialogOpen(true);
+    setCancelDialogOpen(true);
   };
 
   const handleCloseCancelDialog = () => {
-    setcancelDialogOpen(false);
+    setCancelDialogOpen(false);
     setSelectedBooking(null);
     setCancelReason("");
     setCancelError("");
+  };
+  
+  const handleOpenEditSeatDialog = async (booking) => {
+    setSelectedBooking(booking);
+    setSelectedSeatId(booking.seat.id);
+    setSelectedBookingDate(booking.bookingDate);
+    setIsDateChanging(false);
+    setSeatsError("");
+    setUpdateError("");
+    setEditSeatDialogOpen(true);
+    
+    await loadAvailableSeats(booking.bookingDate);
+  };
+  
+  const loadAvailableSeats = async (date) => {
+    try {
+      setIsLoadingSeats(true);
+      const response = await getAvailableSeats(date);
+      
+      if (response.success) {
+        if (response.data && typeof response.data === 'object' && response.data.availableSeats) {
+          setAvailableSeats(response.data.availableSeats || []);
+          setBookedSeats(response.data.bookedSeats || []);
+          
+          // If we're editing an existing booking, add current seat to available seats for selection
+          if (selectedBooking && date === selectedBooking.bookingDate) {
+            const currentSeat = {
+              id: selectedBooking.seat.id,
+              seatNumber: selectedBooking.seat.seatNumber,
+              description: selectedBooking.seat.description || ""
+            };
+            
+            // Check if the current seat is already in available seats
+            const seatExists = response.data.availableSeats.some(
+              seat => seat.id === currentSeat.id
+            );
+            
+            if (!seatExists) {
+              setAvailableSeats(prevSeats => [...prevSeats, currentSeat]);
+            }
+          }
+        } else {
+          setAvailableSeats(response.data || []);
+        }
+      } else {
+        setSeatsError(response.message || "Failed to load available seats");
+      }
+    } catch (err) {
+      setSeatsError("An error occurred while fetching available seats");
+      console.error("Fetch seats error:", err);
+    } finally {
+      setIsLoadingSeats(false);
+    }
+  };
+  
+  const handleCloseEditSeatDialog = () => {
+    setEditSeatDialogOpen(false);
+    setSelectedBooking(null);
+    setSelectedSeatId("");
+    setSelectedBookingDate("");
+    setIsDateChanging(false);
+    setAvailableSeats([]);
+    setBookedSeats([]);
+    setSeatsError("");
+    setUpdateError("");
+  };
+  
+  const handleSeatSelect = (seatId) => {
+    setSelectedSeatId(seatId);
+  };
+  
+  const handleDateChange = (dateString) => {
+    setSelectedBookingDate(dateString);
+    setIsDateChanging(true);
+    setSelectedSeatId(""); // Clear selected seat when date changes
+    loadAvailableSeats(dateString);
+  };
+  
+  
+  const handleUpdateSeat = async () => {
+    if (!selectedBooking || !selectedSeatId) {
+      setUpdateError("Please select a seat");
+      return;
+    }
+    
+    // If nothing has changed, no need to update
+    if (selectedSeatId === selectedBooking.seat.id && 
+        selectedBookingDate === selectedBooking.bookingDate) {
+      handleCloseEditSeatDialog();
+      return;
+    }
+    
+    try {
+      setIsUpdating(true);
+      setUpdateError("");
+      
+      const updates = {
+        seatId: selectedSeatId
+      };
+      
+      // Add booking date to updates if it has changed
+      if (selectedBookingDate !== selectedBooking.bookingDate) {
+        updates.bookingDate = selectedBookingDate;
+      }
+      
+      const response = await updateBooking(selectedBooking.id, updates);
+      
+      if (response.success) {
+        handleCloseEditSeatDialog();
+        await fetchMyBookings();
+      } else {
+        setUpdateError(response.message || "Failed to update booking");
+      }
+    } catch (err) {
+      setUpdateError("An error occurred while updating the booking");
+      console.error("Update booking error:", err);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleCancelBooking = async () => {
@@ -135,6 +283,15 @@ const MyBookings = () => {
 
   const canCancelBooking = (booking) => {
     // Only allow cancellation for upcoming bookings with confirmed status
+    const today = startOfToday();
+    return (
+      booking.status === "confirmed" &&
+      !isBefore(new Date(booking.bookingDate), today)
+    );
+  };
+  
+  const canEditBooking = (booking) => {
+    // Only allow edits for upcoming bookings with confirmed status
     const today = startOfToday();
     return (
       booking.status === "confirmed" &&
@@ -218,7 +375,62 @@ const MyBookings = () => {
           {error}
         </Alert>
       )}
+      
+      {tabValue === 0 && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Book a seat
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Create a new booking for a specific date and select your preferred seat.
+                  </Typography>
+                </Box>
+                
+                {/* Show user's preferred days */}
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Your preferred days:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', mt: 1 }}>
+                    {(() => {
+                      const user = JSON.parse(localStorage.getItem("user")) || {};
+                      const days = user.defaultWorkDays || [1, 2, 3, 4, 5];
+                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                      
+                      return days.map(day => (
+                        <Chip 
+                          key={day} 
+                          label={dayNames[day]} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                        />
+                      ));
+                    })()}
+                  </Box>
+                </Box>
+              </Box>
+              
+              <Button
+                variant="contained"
+                component={RouterLink}
+                to="/bookings/new"
+                startIcon={<AddIcon />}
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                New Booking
+              </Button>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
 
+      
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
@@ -257,37 +469,70 @@ const MyBookings = () => {
                           />
                         </Tooltip>
                       )}
+                      {booking.isSuggested && (
+                        <Tooltip title="Based on your preferences">
+                          <Chip
+                            label="Preferred Day"
+                            size="small"
+                            color="secondary"
+                            sx={{ ml: 1 }}
+                          />
+                        </Tooltip>
+                      )}
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <EventSeatIcon color="primary" sx={{ mr: 1 }} />
-                      <Typography variant="body1">
-                        {booking.seat.seatNumber}
+                    {booking.isSuggested ? (
+                      <Button 
+                        variant="contained" 
+                        size="small"
+                        component={RouterLink}
+                        to={`/bookings/new?date=${booking.bookingDate}`}
+                      >
+                        Book This Day
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <EventSeatIcon color="primary" sx={{ mr: 1 }} />
+                        <Typography variant="body1">
+                          {booking.seat?.seatNumber || "No seat"}
+                        </Typography>
+                      </Box>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {booking.isSuggested ? (
+                      <Chip
+                        label="Suggested"
+                        color="secondary"
+                        size="small"
+                      />
+                    ) : (
+                      <Chip
+                        label={
+                          booking.status === "confirmed"
+                            ? "Confirmed"
+                            : booking.status === "cancelled"
+                            ? "Cancelled"
+                            : "Pending"
+                        }
+                        color={
+                          booking.status === "confirmed"
+                            ? "success"
+                            : booking.status === "cancelled"
+                            ? "error"
+                            : "warning"
+                        }
+                        size="small"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {booking.isSuggested ? (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
                       </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={
-                        booking.status === "confirmed"
-                          ? "Confirmed"
-                          : booking.status === "cancelled"
-                          ? "Cancelled"
-                          : "Pending"
-                      }
-                      color={
-                        booking.status === "confirmed"
-                          ? "success"
-                          : booking.status === "cancelled"
-                          ? "error"
-                          : "warning"
-                      }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {booking.checkInTime ? (
+                    ) : booking.checkInTime ? (
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <AccessTimeIcon color="success" sx={{ mr: 1 }} />
                         <Typography variant="body2">
@@ -301,7 +546,11 @@ const MyBookings = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {booking.checkOutTime ? (
+                    {booking.isSuggested ? (
+                      <Typography variant="body2" color="text.secondary">
+                        N/A
+                      </Typography>
+                    ) : booking.checkOutTime ? (
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <AccessTimeFilledIcon color="success" sx={{ mr: 1 }} />
                         <Typography variant="body2">
@@ -316,15 +565,40 @@ const MyBookings = () => {
                   </TableCell>
                   {tabValue === 0 && (
                     <TableCell>
-                      {canCancelBooking(booking) && (
-                        <Tooltip title="Cancel Booking">
-                          <IconButton
-                            color="error"
-                            onClick={() => handleOpenCancelDialog(booking)}
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </Tooltip>
+                      {booking.isSuggested ? (
+                        <Button 
+                          variant="outlined" 
+                          size="small"
+                          component={RouterLink}
+                          to={`/bookings/new?date=${booking.bookingDate}`}
+                        >
+                          Book
+                        </Button>
+                      ) : (
+                        <>
+                          {canEditBooking(booking) && (
+                            <Tooltip title="Modify Booking">
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleOpenEditSeatDialog(booking)}
+                                sx={{ mr: 1 }}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          
+                          {canCancelBooking(booking) && (
+                            <Tooltip title="Cancel Booking">
+                              <IconButton
+                                color="error"
+                                onClick={() => handleOpenCancelDialog(booking)}
+                              >
+                                <CancelIcon />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </>
                       )}
                     </TableCell>
                   )}
@@ -414,6 +688,111 @@ const MyBookings = () => {
             disabled={cancelling}
           >
             {cancelling ? <CircularProgress size={24} /> : "Cancel Booking"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Edit Booking Dialog */}
+      <Dialog 
+        open={editSeatDialogOpen} 
+        onClose={handleCloseEditSeatDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Change Booking</DialogTitle>
+        <DialogContent>
+          {selectedBooking && (
+            <>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Current Booking:
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <CalendarMonthIcon color="primary" />
+                  <Typography variant="body1">
+                    {format(
+                      new Date(selectedBooking.bookingDate),
+                      "EEEE, MMMM d, yyyy"
+                    )}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EventSeatIcon color="primary" />
+                  <Typography variant="body1">
+                    Seat: {selectedBooking.seat.seatNumber}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {updateError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {updateError}
+                </Alert>
+              )}
+              
+              {seatsError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {seatsError}
+                </Alert>
+              )}
+              
+              <Divider sx={{ my: 2 }}>
+                <Chip label="Select New Date and/or Seat" />
+              </Divider>
+              
+              {/* Date Selection */}
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Select Date:
+              </Typography>
+              
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Box sx={{ mb: 3 }}>
+                  <BookingCalendar
+                    onDateSelect={handleDateChange}
+                    minDate={startOfToday()}
+                    maxDate={addDays(startOfToday(), 30)}
+                    selectedDate={selectedBookingDate}
+                  />
+                </Box>
+              </LocalizationProvider>
+              
+              {/* Seat Selection */}
+              <Typography variant="subtitle1" gutterBottom>
+                Select Seat:
+              </Typography>
+              
+              {isLoadingSeats ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : availableSeats.length > 0 ? (
+                <Box sx={{ mt: 2 }}>
+                  <Paper sx={{ p: 2 }}>
+                    <SeatSelector
+                      seats={availableSeats}
+                      bookedSeats={bookedSeats}
+                      selectedSeatId={selectedSeatId}
+                      onSeatSelect={handleSeatSelect}
+                    />
+                  </Paper>
+                </Box>
+              ) : (
+                <Alert severity="warning" sx={{ my: 2 }}>
+                  No seats are available for this date.
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditSeatDialog}>Cancel</Button>
+          <Button
+            onClick={handleUpdateSeat}
+            variant="contained"
+            color="primary"
+            disabled={isUpdating || !selectedSeatId}
+          >
+            {isUpdating ? <CircularProgress size={24} /> : "Update Booking"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -25,7 +25,8 @@ exports.createBooking = async (req, res) => {
 
     return apiResponse.created(res, "Booking created successfully", booking);
   } catch (error) {
-    if (error.message.includes("already booked")) {
+    if (error.message.includes("already booked") || 
+        error.message.includes("already have a booking")) {
       return apiResponse.badRequest(res, error.message);
     }
     return apiResponse.serverError(res, error);
@@ -43,6 +44,11 @@ exports.updateBooking = async (req, res) => {
     if (!bookingId) {
       return apiResponse.badRequest(res, "Booking ID is required");
     }
+    
+    // Validate updates
+    if (!updates.seatId && !updates.bookingDate) {
+      return apiResponse.badRequest(res, "At least one of seatId or bookingDate must be provided");
+    }
 
     const booking = await bookingService.updateBooking(
       bookingId,
@@ -54,6 +60,7 @@ exports.updateBooking = async (req, res) => {
   } catch (error) {
     if (
       error.message.includes("already booked") ||
+      error.message.includes("already have a booking") ||
       error.message.includes("not found")
     ) {
       return apiResponse.badRequest(res, error.message);
@@ -257,6 +264,108 @@ exports.createAutoBookings = async (req, res) => {
       results
     );
   } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Ensures a user has auto-bookings for their preferred days
+ * This can be called on login or dashboard load
+ */
+exports.ensureUserAutoBookings = async (req, res) => {
+  try {
+    // Get the current user's ID from the request
+    const userId = req.userId;
+    
+    // Get today's date and find next Monday
+    const today = new Date();
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7));
+    const weekStartDate = nextMonday.toISOString().split('T')[0];
+    
+    console.log(`Ensuring auto-bookings for user ${userId} starting from ${weekStartDate}`);
+    
+    // Check if bookings already exist for the next few weeks
+    const nextFewWeeks = new Date(today);
+    nextFewWeeks.setDate(today.getDate() + 28); // 4 weeks ahead
+    
+    const existingBookings = await bookingService.getUserBookings(userId, {
+      startDate: today.toISOString().split('T')[0],
+      endDate: nextFewWeeks.toISOString().split('T')[0],
+      status: 'confirmed'
+    });
+    
+    // Check if they have bookings for week 2, 3, 4 (allow overrides for the upcoming week)
+    const hasBookingsForFutureWeeks = existingBookings.some(booking => {
+      const bookingDate = new Date(booking.bookingDate);
+      return bookingDate > new Date(nextMonday.getTime() + 7 * 24 * 60 * 60 * 1000); // after next week
+    });
+    
+    if (hasBookingsForFutureWeeks) {
+      console.log(`User ${userId} already has bookings for future weeks - not creating auto-bookings`);
+      return apiResponse.success(
+        res,
+        "User already has future bookings - not creating auto-bookings",
+        { bookingsExist: true }
+      );
+    }
+    
+    // Create auto-bookings for this user based on their preferences
+    const results = await bookingService.createAutoBookingsForUser(
+      userId,
+      weekStartDate,
+      userId // self-performed
+    );
+
+    return apiResponse.success(
+      res,
+      "Auto-bookings created based on user preferences",
+      results
+    );
+  } catch (error) {
+    console.error('Error in ensureUserAutoBookings controller:', error);
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Reset all bookings for a user and create fresh auto-bookings
+ * Admin only operation
+ */
+exports.resetAndAutoBook = async (req, res) => {
+  try {
+    const { weekStartDate, userId } = req.body;
+
+    if (!weekStartDate) {
+      return apiResponse.badRequest(res, "Week start date is required");
+    }
+    
+    if (!userId) {
+      return apiResponse.badRequest(res, "User ID is required");
+    }
+    
+    // This is now an admin-only operation
+    if (!req.userRoles.includes('ROLE_ADMIN')) {
+      return apiResponse.forbidden(
+        res,
+        "Only administrators can perform auto-booking operations"
+      );
+    }
+
+    console.log(`Resetting and auto-booking for user ${userId} starting from ${weekStartDate}`);
+    const results = await bookingService.resetAndAutoBookForUser(
+      userId,
+      weekStartDate,
+      req.userId
+    );
+
+    return apiResponse.success(
+      res,
+      "All bookings reset and auto-bookings created successfully",
+      results
+    );
+  } catch (error) {
+    console.error('Error in resetAndAutoBook controller:', error);
     return apiResponse.serverError(res, error);
   }
 };

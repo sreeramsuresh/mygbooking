@@ -4,6 +4,7 @@ const config = require("../config/auth.config");
 const User = db.user;
 const Role = db.role;
 const AuditLog = db.auditLog;
+const bookingService = require("./booking.service");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -130,6 +131,12 @@ const registerUser = async (
         },
       });
     }
+    
+    // Log user preferences - auto-booking must be manually done by admin
+    console.log(`New user ${user.id} created with preferences: defaultWorkDays=${JSON.stringify(user.defaultWorkDays)}, requiredDaysPerWeek=${user.requiredDaysPerWeek}`);
+    console.log(`NOTE: Admin must manually trigger auto-booking for this user`);
+    
+    // Auto-booking is now admin-only
 
     return {
       id: user.id,

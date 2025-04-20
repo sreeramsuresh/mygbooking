@@ -50,6 +50,23 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         setUser(response.data);
         localStorage.setItem("user", JSON.stringify(response.data));
+        
+        // After successful login, trigger auto-booking creation
+        try {
+          const bookingResponse = await fetch('/api/bookings/ensure-auto-bookings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${response.data.accessToken}`
+            }
+          });
+          const bookingData = await bookingResponse.json();
+          console.log("Auto-booking setup result:", bookingData);
+        } catch (bookingError) {
+          console.error("Failed to set up auto-bookings:", bookingError);
+          // Non-critical error, don't fail login
+        }
+        
         return { success: true };
       } else {
         setError(response.message || "Login failed");

@@ -336,6 +336,38 @@ const EmployeeDashboard = () => {
                     </ListItem>
                   ))}
                 </List>
+              ) : dashboardData && dashboardData.suggestedBookings && dashboardData.suggestedBookings.length > 0 ? (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    These dates are suggested based on your preferred days
+                  </Alert>
+                  <List>
+                    {dashboardData.suggestedBookings.map((suggestion, index) => (
+                      <ListItem key={`suggestion-${index}`} divider>
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: "action.disabled" }}>
+                            <EventIcon />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={format(
+                            new Date(suggestion.suggestedDate),
+                            "EEEE, MMMM d"
+                          )}
+                          secondary="No booking yet - click to book"
+                        />
+                        <Button 
+                          component={RouterLink} 
+                          to="/bookings/new" 
+                          variant="outlined" 
+                          size="small"
+                        >
+                          Book
+                        </Button>
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
               ) : (
                 <Box sx={{ py: 4, textAlign: "center" }}>
                   <Typography variant="body1" color="textSecondary">

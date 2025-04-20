@@ -30,6 +30,28 @@ const dashboardService = {
       throw error;
     }
   },
+  
+  resetAndAutoBookForUser: async (weekStartDate) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const userId = user ? user.id : null;
+      
+      if (!userId) {
+        return { success: false, message: 'User not found' };
+      }
+      
+      const response = await axios.post(`${API_URL}/bookings/reset-auto-book`, {
+        userId,
+        weekStartDate
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      return { success: false, message: error.message };
+    }
+  },
 
   getManagerDashboard: async () => {
     try {

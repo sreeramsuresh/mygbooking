@@ -33,6 +33,15 @@ const checkDuplicateUsernameOrEmail = async (req, res, next) => {
         message: "Failed! Email is already in use!",
       });
     }
+    
+    // Log registration data including default work days
+    console.log("Registration data:", {
+      username: req.body.username,
+      email: req.body.email,
+      fullName: req.body.fullName,
+      defaultWorkDays: req.body.defaultWorkDays || [1, 2, 3, 4, 5],
+      requiredDaysPerWeek: req.body.requiredDaysPerWeek || 2
+    });
 
     next();
   } catch (error) {

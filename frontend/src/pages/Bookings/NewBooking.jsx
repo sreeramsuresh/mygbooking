@@ -117,7 +117,13 @@ const NewBooking = () => {
           navigate("/bookings/my");
         }, 2000);
       } else {
-        setBookingError(response.message || "Failed to create booking");
+        if (response.message && response.message.includes("already have a booking for this date")) {
+          setBookingError(
+            "You already have a booking for this date. You can view or modify your existing booking in the My Bookings section."
+          );
+        } else {
+          setBookingError(response.message || "Failed to create booking");
+        }
       }
     } catch (err) {
       setBookingError("An error occurred while creating the booking");
@@ -189,7 +195,22 @@ const NewBooking = () => {
         )}
 
         {bookingError && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            action={
+              bookingError.includes("already have a booking") ? (
+                <Button 
+                  color="inherit" 
+                  size="small"
+                  component={RouterLink}
+                  to="/bookings/my"
+                >
+                  View My Bookings
+                </Button>
+              ) : null
+            }
+          >
             {bookingError}
           </Alert>
         )}
