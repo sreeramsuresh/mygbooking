@@ -1,207 +1,274 @@
-// frontend/src/components/common/Header.jsx
-import React, { useState } from "react";
+// frontend/src/components/common/Sidebar.jsx
+import React from "react";
 import {
-  AppBar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
   Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  Menu,
-  MenuItem,
-  Button,
-  Badge,
-  Avatar,
-  Tooltip,
   Divider,
-  useMediaQuery,
+  Box,
   useTheme,
+  useMediaQuery,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
-import PersonIcon from "@mui/icons-material/Person";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import {
+  Dashboard as DashboardIcon,
+  CalendarMonth as CalendarIcon,
+  Event as EventIcon,
+  Person as PersonIcon,
+  Description as DescriptionIcon,
+  BarChart as ReportIcon,
+  SupervisorAccount as UsersIcon,
+  FormatListBulleted as RequestsIcon,
+  Settings as SettingsIcon,
+  AutoAwesome as AutoBookingIcon
+} from "@mui/icons-material";
+import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
-const Header = ({ onMobileMenuToggle }) => {
-  const { user, logout } = useAuth();
+const Sidebar = ({ isMobileOpen, onMobileClose }) => {
+  const { isAdmin, isManager } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-    handleUserMenuClose();
+  const handleNavigation = (path) => {
+    navigate(path);
+    if (!isDesktop) {
+      onMobileClose();
+    }
   };
 
-  const handleUserMenuOpen = (event) => {
-    setUserMenuAnchor(event.currentTarget);
+  const isActive = (path) => {
+    return location.pathname === path;
   };
 
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
-  };
+  // Common menu items for all users
+  const commonMenuItems = [
+    {
+      text: "Dashboard",
+      icon: <DashboardIcon />,
+      path: "/dashboard",
+    },
+    {
+      text: "New Booking",
+      icon: <CalendarIcon />,
+      path: "/bookings/new",
+    },
+    {
+      text: "My Bookings",
+      icon: <EventIcon />,
+      path: "/bookings/my",
+    },
+    {
+      text: "My Requests",
+      icon: <RequestsIcon />,
+      path: "/requests/my",
+    },
+    {
+      text: "Profile",
+      icon: <PersonIcon />,
+      path: "/profile",
+    },
+  ];
 
-  const handleNotificationsOpen = (event) => {
-    setNotificationsAnchor(event.currentTarget);
-  };
+  // Menu items for managers and admins
+  const managerMenuItems = [
+    {
+      text: "Pending Requests",
+      icon: <DescriptionIcon />,
+      path: "/requests/pending",
+    },
+  ];
 
-  const handleNotificationsClose = () => {
-    setNotificationsAnchor(null);
-  };
+  // Menu items for admins only
+  const adminMenuItems = [
+    {
+      text: "Users",
+      icon: <UsersIcon />,
+      path: "/admin/users",
+    },
+    {
+      text: "Reports",
+      icon: <ReportIcon />,
+      path: "/admin/reports",
+    },
+    {
+      text: "Auto-Booking",
+      icon: <AutoBookingIcon />,
+      path: "/admin/auto-booking",
+    },
+  ];
 
-  const userMenuOpen = Boolean(userMenuAnchor);
-  const notificationsOpen = Boolean(notificationsAnchor);
-
-  return (
-    <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
-      <Toolbar>
-        {isMobile && (
-          <IconButton
-            color="inherit"
-            edge="start"
-            sx={{ mr: 2 }}
-            onClick={onMobileMenuToggle}
-          >
-            <MenuIcon />
-          </IconButton>
-        )}
-
-        <Typography
-          variant="h6"
-          component={RouterLink}
-          to="/dashboard"
-          sx={{
-            flexGrow: 1,
-            color: "white",
-            textDecoration: "none",
-            fontWeight: "bold",
-            letterSpacing: "0.5px",
-          }}
-        >
-          Office Attendance Tracker
-        </Typography>
-
-        {user && (
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Tooltip title="Notifications">
-              <IconButton
-                color="inherit"
-                onClick={handleNotificationsOpen}
-                size="large"
-              >
-                <Badge badgeContent={3} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title="Account">
-              <IconButton
-                onClick={handleUserMenuOpen}
-                color="inherit"
-                size="large"
-                sx={{ ml: 1 }}
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.dark" }}>
-                  {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
-
-        {/* User Menu */}
-        <Menu
-          anchorEl={userMenuAnchor}
-          open={userMenuOpen}
-          onClose={handleUserMenuClose}
-          PaperProps={{
-            elevation: 3,
-            sx: { minWidth: 200 },
-          }}
-          transformOrigin={{ horizontal: "right", vertical: "top" }}
-          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-        >
-          <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              {user?.fullName || "User"}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {user?.email || ""}
-            </Typography>
-          </Box>
-
-          <Divider />
-
-          <MenuItem
-            onClick={() => {
-              handleUserMenuClose();
-              navigate("/profile");
+  const drawerContent = (
+    <div>
+      <Toolbar />
+      <Divider />
+      <List>
+        {/* Common menu items */}
+        {commonMenuItems.map((item) => (
+          <ListItem
+            button
+            key={item.text}
+            onClick={() => handleNavigation(item.path)}
+            selected={isActive(item.path)}
+            sx={{
+              "&.Mui-selected": {
+                backgroundColor: theme.palette.primary.light,
+                color: theme.palette.primary.contrastText,
+                "& .MuiListItemIcon-root": {
+                  color: theme.palette.primary.contrastText,
+                },
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              },
+              borderRadius: 1,
+              my: 0.5,
+              mx: 1,
             }}
           >
-            <PersonIcon sx={{ mr: 2 }} />
-            My Profile
-          </MenuItem>
+            <ListItemIcon
+              sx={{
+                color: isActive(item.path)
+                  ? theme.palette.primary.contrastText
+                  : "inherit",
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItem>
+        ))}
 
-          <MenuItem onClick={handleLogout}>
-            <LogoutIcon sx={{ mr: 2 }} />
-            Logout
-          </MenuItem>
-        </Menu>
+        {/* Managers and Admin items */}
+        {(isManager || isAdmin) && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            {managerMenuItems.map((item) => (
+              <ListItem
+                button
+                key={item.text}
+                onClick={() => handleNavigation(item.path)}
+                selected={isActive(item.path)}
+                sx={{
+                  "&.Mui-selected": {
+                    backgroundColor: theme.palette.primary.light,
+                    color: theme.palette.primary.contrastText,
+                    "& .MuiListItemIcon-root": {
+                      color: theme.palette.primary.contrastText,
+                    },
+                    "&:hover": {
+                      backgroundColor: theme.palette.primary.main,
+                    },
+                  },
+                  borderRadius: 1,
+                  my: 0.5,
+                  mx: 1,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: isActive(item.path)
+                      ? theme.palette.primary.contrastText
+                      : "inherit",
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
+          </>
+        )}
 
-        {/* Notifications Menu */}
-        <Menu
-          anchorEl={notificationsAnchor}
-          open={notificationsOpen}
-          onClose={handleNotificationsClose}
-          PaperProps={{
-            elevation: 3,
-            sx: { minWidth: 300, maxWidth: 320 },
-          }}
-          transformOrigin={{ horizontal: "right", vertical: "top" }}
-          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-        >
-          <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Notifications
-            </Typography>
-          </Box>
+        {/* Admin only items */}
+        {isAdmin && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            {adminMenuItems.map((item) => (
+              <ListItem
+                button
+                key={item.text}
+                onClick={() => handleNavigation(item.path)}
+                selected={isActive(item.path)}
+                sx={{
+                  "&.Mui-selected": {
+                    backgroundColor: theme.palette.primary.light,
+                    color: theme.palette.primary.contrastText,
+                    "& .MuiListItemIcon-root": {
+                      color: theme.palette.primary.contrastText,
+                    },
+                    "&:hover": {
+                      backgroundColor: theme.palette.primary.main,
+                    },
+                  },
+                  borderRadius: 1,
+                  my: 0.5,
+                  mx: 1,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: isActive(item.path)
+                      ? theme.palette.primary.contrastText
+                      : "inherit",
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
+          </>
+        )}
+      </List>
+    </div>
+  );
 
-          <Divider />
+  return (
+    <Box
+      component="nav"
+      sx={{ width: { md: 240 }, flexShrink: { md: 0 } }}
+      aria-label="mailbox folders"
+    >
+      {/* Mobile drawer */}
+      <Drawer
+        variant="temporary"
+        open={isMobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile
+        }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            boxSizing: "border-box",
+            width: 240,
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
 
-          <MenuItem>
-            <Typography variant="body2">
-              Your booking for Friday has been confirmed.
-            </Typography>
-          </MenuItem>
-
-          <MenuItem>
-            <Typography variant="body2">
-              Manager has approved your regularization request.
-            </Typography>
-          </MenuItem>
-
-          <MenuItem>
-            <Typography variant="body2">
-              Don't forget to check in for today's booking.
-            </Typography>
-          </MenuItem>
-
-          <Divider />
-
-          <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>
-            <Button size="small">View All</Button>
-          </Box>
-        </Menu>
-      </Toolbar>
-    </AppBar>
+      {/* Desktop drawer */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: "none", md: "block" },
+          "& .MuiDrawer-paper": {
+            boxSizing: "border-box",
+            width: 240,
+          },
+        }}
+        open
+      >
+        {drawerContent}
+      </Drawer>
+    </Box>
   );
 };
 
-export default Header;
+export default Sidebar;

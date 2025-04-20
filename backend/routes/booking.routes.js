@@ -25,5 +25,9 @@ router.get("/by-date", [authJwt.isManager], controller.getBookingsByDate);
 router.post("/auto-bookings", [authJwt.isAdmin], controller.createAutoBookings);
 // Only admins can create auto-bookings
 router.post("/reset-auto-book", [authJwt.isAdmin], controller.resetAndAutoBook);
+// Debug endpoint to check auto-booking preferences for all users
+router.get("/debug-auto-booking", [authJwt.isAdmin], controller.debugAutoBookingPrefs);
+// Force auto-booking for all users
+router.post("/force-auto-booking", [authJwt.isAdmin], controller.forceAutoBookingForAll);
 
 module.exports = router;

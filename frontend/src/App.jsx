@@ -17,6 +17,7 @@ import PendingRequests from "./pages/Requests/PendingRequests";
 import Profile from "./pages/Profile";
 import Users from "./pages/Admin/Users";
 import Reports from "./pages/Admin/Reports";
+import AutoBookingManagement from "./pages/Admin/AutoBookingManagement";
 import NotFound from "./pages/NotFound";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ProtectedRoute from "./components/common/ProtectedRoute";
@@ -149,6 +150,15 @@ const App = () => {
           element={
             <ProtectedRoute requiredRoles={["admin"]}>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/auto-booking"
+          element={
+            <ProtectedRoute requiredRoles={["admin"]}>
+              <AutoBookingManagement />
             </ProtectedRoute>
           }
         />

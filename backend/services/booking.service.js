@@ -794,10 +794,13 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
  * Creates automatic bookings for a specific user
  */
 const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => {
+  const logger = require("../utils/logger");
+  
   try {
     // Get the user
     const user = await User.findByPk(userId);
     if (!user) {
+      logger.error(`User ID ${userId} not found in database`);
       throw new Error("User not found");
     }
     
@@ -813,16 +816,37 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
     const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays
     const requiredDaysPerWeek = user.requiredDaysPerWeek || 2;
     
-    console.log(`Creating auto bookings for user ${userId} with:`);
-    console.log(`- Default work days: ${JSON.stringify(defaultWorkDays)}`);
-    console.log(`- Required days per week: ${requiredDaysPerWeek}`);
+    logger.info(`Creating auto bookings for user ${userId} (${user.username}) with:`);
+    logger.info(`- Default work days: ${JSON.stringify(defaultWorkDays)}`);
+    logger.info(`- Required days per week: ${requiredDaysPerWeek}`);
+    
+    // Validate user preferences
+    if (!defaultWorkDays || !Array.isArray(defaultWorkDays) || defaultWorkDays.length === 0) {
+      logger.error(`Invalid defaultWorkDays for user ${userId}: ${JSON.stringify(defaultWorkDays)}`);
+      return {
+        success: [],
+        failed: [{
+          reason: "Invalid or missing defaultWorkDays in user preferences"
+        }]
+      };
+    }
+    
+    if (!requiredDaysPerWeek || requiredDaysPerWeek <= 0) {
+      logger.error(`Invalid requiredDaysPerWeek for user ${userId}: ${requiredDaysPerWeek}`);
+      return {
+        success: [],
+        failed: [{
+          reason: "Invalid or missing requiredDaysPerWeek in user preferences"
+        }]
+      };
+    }
     
     // Use only the required number of days from the default days
     const daysToBook = defaultWorkDays.slice(0, requiredDaysPerWeek);
-    console.log(`- Days that will be booked: ${JSON.stringify(daysToBook)}`);
+    logger.info(`- Days that will be booked: ${JSON.stringify(daysToBook)}`);
     
     if (daysToBook.length === 0) {
-      console.error(`No days to book for user ${userId} - defaultWorkDays may be empty or invalid`);
+      logger.error(`No days to book for user ${userId} - defaultWorkDays may be empty or invalid`);
       return {
         success: [],
         failed: [{
@@ -831,12 +855,17 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
       };
     }
     
-    // Create bookings for next 4 weeks
-    for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
+    // Skip the first week (week 1) to allow for manual overrides
+    // Only auto-book weeks 2, 3, and 4
+    
+    // Create bookings for weeks 2-4
+    for (let weekOffset = 1; weekOffset < 4; weekOffset++) {
       const currentWeekStart = new Date(weekStart);
       currentWeekStart.setDate(currentWeekStart.getDate() + (weekOffset * 7));
       const currentWeekNumber = getWeekNumber(currentWeekStart);
       const year = currentWeekStart.getFullYear();
+      
+      logger.info(`Processing week ${weekOffset+1} (offset ${weekOffset}) starting ${currentWeekStart.toISOString().split('T')[0]}`);
       
       // Create bookings for each selected work day in this week
       for (const dayOfWeek of daysToBook) {
@@ -849,7 +878,7 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
         // Format date for database (YYYY-MM-DD)
         const formattedDate = bookingDate.toISOString().split("T")[0];
         
-        console.log(`Week ${weekOffset+1}: Attempting to book day ${dayOfWeek} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]}) on ${formattedDate}`);
+        logger.info(`Week ${weekOffset+1}: Attempting to book day ${dayOfWeek} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]}) on ${formattedDate}`);
         
         // Check if user already has a booking for this date
         const existingBooking = await Booking.findOne({
@@ -862,60 +891,75 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
         
         // Skip if already booked
         if (existingBooking) {
+          logger.info(`User ${userId} already has booking ID ${existingBooking.id} for date ${formattedDate} - skipping`);
           continue;
         }
         
-        // Find an available seat
-        const availableSeatsData = await getAvailableSeats(formattedDate);
-        
-        if (!availableSeatsData.availableSeats || availableSeatsData.availableSeats.length === 0) {
-          // No seats available
-          results.failed.push({
-            date: formattedDate,
-            reason: "No available seats",
-          });
-          continue;
-        }
-        
-        // Choose the first available seat
-        const seat = availableSeatsData.availableSeats[0];
-        
-        // Create booking
-        console.log(`Creating auto-booking for user ${userId}, seat ${seat.id}, date ${formattedDate}`);
-        const booking = await Booking.create({
-          userId,
-          seatId: seat.id,
-          bookingDate: formattedDate,
-          weekNumber: currentWeekNumber,
-          status: "confirmed",
-          isAutoBooked: true,
-        });
-        console.log(`Auto-booking created successfully with ID ${booking.id}`);
-        
-        // Log the action
-        await AuditLog.create({
-          entityType: "booking",
-          entityId: booking.id,
-          action: "auto-create",
-          performedBy,
-          newValues: {
+        try {
+          // Find an available seat
+          logger.info(`Looking for available seats on ${formattedDate}`);
+          const availableSeatsData = await getAvailableSeats(formattedDate);
+          
+          if (!availableSeatsData || !availableSeatsData.availableSeats || availableSeatsData.availableSeats.length === 0) {
+            // No seats available
+            logger.warn(`No seats available for date ${formattedDate}`);
+            results.failed.push({
+              date: formattedDate,
+              reason: "No available seats",
+            });
+            continue;
+          }
+          
+          logger.info(`Found ${availableSeatsData.availableSeats.length} available seats for date ${formattedDate}`);
+          
+          // Choose the first available seat
+          const seat = availableSeatsData.availableSeats[0];
+          
+          // Create booking
+          logger.info(`Creating auto-booking for user ${userId}, seat ${seat.id}, date ${formattedDate}`);
+          const booking = await Booking.create({
             userId,
             seatId: seat.id,
             bookingDate: formattedDate,
+            weekNumber: currentWeekNumber,
             status: "confirmed",
             isAutoBooked: true,
-          },
-        });
-        
-        results.success.push({
-          date: formattedDate,
-          seatNumber: seat.seatNumber,
-        });
+          });
+          logger.info(`Auto-booking created successfully with ID ${booking.id}`);
+          
+          // Log the action
+          await AuditLog.create({
+            entityType: "booking",
+            entityId: booking.id,
+            action: "auto-create",
+            performedBy,
+            newValues: {
+              userId,
+              seatId: seat.id,
+              bookingDate: formattedDate,
+              status: "confirmed",
+              isAutoBooked: true,
+            },
+          });
+          
+          results.success.push({
+            date: formattedDate,
+            seatNumber: seat.seatNumber,
+          });
+        } catch (seatError) {
+          logger.error(`Error finding seats or creating booking for user ${userId} on date ${formattedDate}:`, seatError);
+          results.failed.push({
+            date: formattedDate,
+            reason: `Error: ${seatError.message}`,
+          });
+        }
       }
     }
     
+    logger.info(`Auto-booking completed for user ${userId}: ${results.success.length} bookings created, ${results.failed.length} failed`);
     return results;
   } catch (error) {
+    logger.error(`Unexpected error in createAutoBookingsForUser for user ${userId}:`, error);
     throw error;
   }
 };

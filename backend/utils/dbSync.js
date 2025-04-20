@@ -27,6 +27,9 @@ async function initDatabase() {
     // Seed initial seats if they don't exist
     await seedSeats();
 
+    // Update user preferences to ensure valid auto-booking settings
+    await updateUserPreferences();
+
     logger.info("Database initialization completed successfully.");
   } catch (error) {
     logger.error("Database initialization failed:", error);
@@ -139,6 +142,54 @@ async function runMigrations() {
   // This is where you would implement DB migrations if needed
   // For simplicity, we're using sequelize.sync with alter:true for now
   logger.info("No manual migrations needed with current setup.");
+}
+
+/**
+ * Update existing users to ensure they have valid auto-booking preferences
+ */
+async function updateUserPreferences() {
+  try {
+    const users = await User.findAll({
+      where: {
+        isActive: true
+      }
+    });
+    
+    let updatedCount = 0;
+    
+    for (const user of users) {
+      let needsUpdate = false;
+      
+      // Check defaultWorkDays and fix if invalid
+      if (!user.defaultWorkDays || !Array.isArray(user.defaultWorkDays) || user.defaultWorkDays.length === 0) {
+        user.defaultWorkDays = [1, 2, 3, 4, 5]; // Default to weekdays
+        needsUpdate = true;
+        logger.info(`Fixed invalid defaultWorkDays for user ${user.id} (${user.username})`);
+      }
+      
+      // Check requiredDaysPerWeek and fix if invalid
+      if (!user.requiredDaysPerWeek || user.requiredDaysPerWeek <= 0 || user.requiredDaysPerWeek > 7) {
+        user.requiredDaysPerWeek = 2; // Default to 2 days per week
+        needsUpdate = true;
+        logger.info(`Fixed invalid requiredDaysPerWeek for user ${user.id} (${user.username})`);
+      }
+      
+      // Update user if needed
+      if (needsUpdate) {
+        await user.save();
+        updatedCount++;
+      }
+    }
+    
+    if (updatedCount > 0) {
+      logger.info(`Updated auto-booking preferences for ${updatedCount} users`);
+    } else {
+      logger.info("All users have valid auto-booking preferences");
+    }
+  } catch (error) {
+    logger.error("Error updating user preferences:", error);
+    // Don't throw error to allow server startup even if this fails
+  }
 }
 
 module.exports = {

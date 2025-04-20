@@ -136,3 +136,20 @@
 2025-04-20T07:41:09.893Z info: Database initialization completed successfully.
 2025-04-20T07:41:09.897Z info: Scheduler initialized successfully
 2025-04-20T07:41:09.899Z info: Server is running on port 8080
+2025-04-20T07:47:41.155Z info: Checking database structure...
+2025-04-20T07:47:42.102Z info: Database synchronized successfully.
+2025-04-20T07:47:42.109Z info: Roles already exist, skipping seed.
+2025-04-20T07:47:42.128Z info: Users already exist, skipping admin user creation.
+2025-04-20T07:47:42.140Z info: Seats already exist, skipping seat creation.
+2025-04-20T07:47:42.140Z info: Database initialization completed successfully.
+2025-04-20T07:47:42.149Z info: Scheduler initialized successfully
+2025-04-20T07:47:42.155Z info: Server is running on port 8080
+2025-04-20T08:05:48.347Z info: Checking database structure...
+2025-04-20T08:05:49.141Z info: Database synchronized successfully.
+2025-04-20T08:05:49.148Z info: Roles already exist, skipping seed.
+2025-04-20T08:05:49.168Z info: Users already exist, skipping admin user creation.
+2025-04-20T08:05:49.178Z info: Seats already exist, skipping seat creation.
+2025-04-20T08:05:49.185Z info: All users have valid auto-booking preferences
+2025-04-20T08:05:49.186Z info: Database initialization completed successfully.
+2025-04-20T08:05:49.191Z info: Scheduler initialized successfully
+2025-04-20T08:05:49.195Z info: Server is running on port 8080
