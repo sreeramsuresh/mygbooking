@@ -14,19 +14,19 @@ import { useNavigate, Link } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login } = useAuth();
+  const { login: authLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!username || !password) {
-      setError("Please enter both username and password");
+    if (!login || !password) {
+      setError("Please enter both username/email and password");
       return;
     }
 
@@ -34,7 +34,7 @@ const Login = () => {
     setError("");
 
     try {
-      const result = await login(username, password);
+      const result = await authLogin(login, password);
 
       if (result.success) {
         navigate("/dashboard");
@@ -72,13 +72,13 @@ const Login = () => {
               margin="normal"
               required
               fullWidth
-              id="username"
-              label="Username"
-              name="username"
-              autoComplete="username"
+              id="login"
+              label="Username or Email"
+              name="login"
+              autoComplete="username email"
               autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
               disabled={isSubmitting}
             />
 

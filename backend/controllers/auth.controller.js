@@ -3,17 +3,20 @@ const authService = require("../services/auth.service");
 const apiResponse = require("../utils/apiResponse");
 
 /**
- * Handles user sign-in
+ * Handles user sign-in with username or email
  */
 exports.signin = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { login, password } = req.body;
 
-    if (!username || !password) {
-      return apiResponse.badRequest(res, "Username and password are required");
+    if (!login || !password) {
+      return apiResponse.badRequest(
+        res,
+        "Username/email and password are required"
+      );
     }
 
-    const result = await authService.authenticateUser(username, password);
+    const result = await authService.authenticateUser(login, password);
 
     if (!result.success) {
       return apiResponse.unauthorized(res, result.message);

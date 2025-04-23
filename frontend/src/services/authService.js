@@ -5,18 +5,18 @@ import { API_URL } from "../config";
 const API_ENDPOINT = `${API_URL}/auth`;
 
 const authService = {
-  login: async (username, password) => {
+  login: async (login, password) => {
     try {
       const response = await axios.post(`${API_ENDPOINT}/signin`, {
-        username,
+        login,
         password,
       });
-      
+
       // If login successful, store user data including preferences in localStorage
       if (response.data && response.data.success) {
         localStorage.setItem("user", JSON.stringify(response.data.data));
       }
-      
+
       return response.data;
     } catch (error) {
       if (error.response) {

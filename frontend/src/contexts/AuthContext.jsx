@@ -38,14 +38,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * Login user
+   * Login user with username/email and password
    */
-  const login = async (username, password) => {
+  const login = async (login, password) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await authService.login(username, password);
+      const response = await authService.login(login, password);
 
       if (response.success) {
         setUser(response.data);

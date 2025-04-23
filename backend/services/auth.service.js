@@ -5,21 +5,24 @@ const User = db.user;
 const Role = db.role;
 const AuditLog = db.auditLog;
 const bookingService = require("./booking.service");
+const { Op } = db.Sequelize;
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 /**
  * Authenticate a user and generate tokens
- * @param {string} username
+ * @param {string} login - Username or email
  * @param {string} password
  * @returns {Object} Authentication result
  */
-const authenticateUser = async (username, password) => {
+const authenticateUser = async (login, password) => {
   try {
-    // Find user by username
+    // Find user by username or email
     const user = await User.findOne({
-      where: { username },
+      where: {
+        [Op.or]: [{ username: login }, { email: login }],
+      },
     });
 
     if (!user) {
@@ -131,11 +134,17 @@ const registerUser = async (
         },
       });
     }
-    
+
     // Log user preferences - auto-booking must be manually done by admin
-    console.log(`New user ${user.id} created with preferences: defaultWorkDays=${JSON.stringify(user.defaultWorkDays)}, requiredDaysPerWeek=${user.requiredDaysPerWeek}`);
+    console.log(
+      `New user ${
+        user.id
+      } created with preferences: defaultWorkDays=${JSON.stringify(
+        user.defaultWorkDays
+      )}, requiredDaysPerWeek=${user.requiredDaysPerWeek}`
+    );
     console.log(`NOTE: Admin must manually trigger auto-booking for this user`);
-    
+
     // Auto-booking is now admin-only
 
     return {
