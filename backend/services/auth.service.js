@@ -111,13 +111,14 @@ const refreshToken = async (requestToken) => {
       expiresIn: config.jwtExpiration,
     });
 
-    // Optionally, you can create a new refresh token and revoke the old one
-    // for enhanced security, or just return the existing refresh token
+    // Revoke the old refresh token and create a new one for better security
+    await refreshToken.update({ isRevoked: true });
+    const newRefreshToken = await refreshTokenService.createToken(userId);
 
     return {
       success: true,
       accessToken: newAccessToken,
-      refreshToken: refreshToken.token,
+      refreshToken: newRefreshToken.token,
     };
   } catch (error) {
     throw error;

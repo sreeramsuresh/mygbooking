@@ -587,37 +587,39 @@ const getWeeklyAttendanceStatus = async (userId, year, weekNumber) => {
  */
 const createAutoBookings = async (weekStartDate, performedBy) => {
   try {
-    // Find admin role to exclude admins from auto-booking
+    // Find admin and system_admin roles to exclude them from auto-booking
     const Role = db.role;
-    const adminUserIds = [];
+    const excludedUserIds = [];
 
     try {
-      // Find admin role
-      const adminRole = await Role.findOne({
+      // Find admin roles to exclude
+      const adminRoles = await Role.findAll({
         where: {
-          name: "admin",
+          name: { [Op.in]: ["admin", "system_admin"] }
         },
       });
 
-      if (adminRole) {
+      if (adminRoles.length > 0) {
         // Get the junction table that connects users and roles
         const UserRoles =
           db.sequelize.models.user_roles || db.sequelize.models.userRoles;
 
-        // Find admin users
-        const adminUserRoles = await UserRoles.findAll({
-          where: {
-            roleId: adminRole.id,
-          },
-        });
+        // Find users with excluded roles
+        for (const role of adminRoles) {
+          const roleUsers = await UserRoles.findAll({
+            where: {
+              roleId: role.id,
+            },
+          });
 
-        // Extract admin user IDs
-        adminUserRoles.forEach((ur) => {
-          adminUserIds.push(ur.userId);
-        });
+          // Extract user IDs
+          roleUsers.forEach((ur) => {
+            excludedUserIds.push(ur.userId);
+          });
+        }
 
         console.log(
-          `Excluding ${adminUserIds.length} admin users from auto-booking`
+          `Excluding ${excludedUserIds.length} admin/system_admin users from auto-booking`
         );
       }
     } catch (roleError) {
@@ -625,12 +627,12 @@ const createAutoBookings = async (weekStartDate, performedBy) => {
       // Continue with the process even if we can't identify admins
     }
 
-    // Get all active NON-ADMIN users
+    // Get all active non-admin users
     const users = await User.findAll({
       where: {
         isActive: true,
         id: {
-          [Op.notIn]: adminUserIds.length > 0 ? adminUserIds : [0], // Use [0] to avoid empty IN clause
+          [Op.notIn]: excludedUserIds.length > 0 ? excludedUserIds : [0], // Use [0] to avoid empty IN clause
         },
       },
     });

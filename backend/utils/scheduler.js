@@ -1,6 +1,7 @@
 // backend/utils/scheduler.js
 const cron = require("node-cron");
 const bookingService = require("../services/booking.service");
+const refreshTokenService = require("../services/refreshToken.service");
 const logger = require("./logger");
 
 /**
@@ -193,6 +194,17 @@ function initScheduler() {
       await processAutoBookingsForAllUsers();
     } catch (error) {
       logger.error("Scheduled auto-booking job failed:", error);
+    }
+  });
+  
+  // Run daily to clean up expired refresh tokens
+  cron.schedule("0 0 * * *", async () => {
+    logger.info("Running refresh token cleanup job");
+    try {
+      const deletedCount = await refreshTokenService.cleanupTokens();
+      logger.info(`Refresh token cleanup completed: ${deletedCount} tokens removed`);
+    } catch (error) {
+      logger.error("Refresh token cleanup job failed:", error);
     }
   });
 

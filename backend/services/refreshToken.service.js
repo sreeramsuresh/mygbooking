@@ -5,6 +5,7 @@ const db = require("../db/models");
 const config = require("../config/auth.config");
 const RefreshToken = db.refreshToken;
 const User = db.user;
+const { Op } = db.Sequelize;
 
 /**
  * Create a new refresh token for a user
@@ -84,9 +85,32 @@ const revokeAllUserTokens = async (userId) => {
   }
 };
 
+/**
+ * Clean up expired and revoked refresh tokens
+ */
+const cleanupTokens = async () => {
+  try {
+    const deleted = await RefreshToken.destroy({
+      where: {
+        [Op.or]: [
+          { expiryDate: { [Op.lt]: new Date() } },
+          { isRevoked: true }
+        ]
+      }
+    });
+    
+    console.log(`Cleaned up ${deleted} expired or revoked refresh tokens`);
+    return deleted;
+  } catch (error) {
+    console.error("Error cleaning up refresh tokens:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   createToken,
   verifyExpiration,
   findByToken,
   revokeAllUserTokens,
+  cleanupTokens,
 };

@@ -15,6 +15,9 @@ const authService = {
       // If login successful, store user data including tokens in localStorage
       if (response.data && response.data.success) {
         localStorage.setItem("user", JSON.stringify(response.data.data));
+        
+        // Start token expiration check timer
+        authService.startTokenExpirationTimer();
 
         // After successful login, ensure user has auto-bookings
         try {
@@ -105,6 +108,12 @@ const authService = {
 
       // Remove user from localStorage
       localStorage.removeItem("user");
+      
+      // Clear token expiration timer
+      if (window.tokenExpirationTimer) {
+        clearInterval(window.tokenExpirationTimer);
+        window.tokenExpirationTimer = null;
+      }
 
       return { success: true };
     } catch (error) {
@@ -141,11 +150,47 @@ const authService = {
 
       // Check if token is expired
       const currentTime = Math.floor(Date.now() / 1000);
-      return decoded.exp < currentTime;
+      
+      // Add a buffer of 60 seconds to refresh token slightly before it expires
+      const expirationBuffer = 60; // seconds
+      return decoded.exp < (currentTime + expirationBuffer);
     } catch (error) {
       console.error("Error checking token expiration:", error);
       return true;
     }
+  },
+  
+  // Start a timer to check token expiration periodically (for long idle periods)
+  startTokenExpirationTimer: () => {
+    const tokenCheckInterval = 5 * 60 * 1000; // Check every 5 minutes
+    
+    // Clear any existing timer
+    if (window.tokenExpirationTimer) {
+      clearInterval(window.tokenExpirationTimer);
+    }
+    
+    window.tokenExpirationTimer = setInterval(() => {
+      const user = authService.getCurrentUser();
+      
+      if (user && user.accessToken) {
+        if (authService.isTokenExpired(user.accessToken)) {
+          console.log("Token expired during idle period, refreshing...");
+          
+          // Try to refresh token
+          authService.refreshToken(user.refreshToken).catch(error => {
+            console.error("Failed to refresh token during idle check:", error);
+            authService.logout();
+            window.location.href = "/login?expired=true";
+          });
+        }
+      } else {
+        // No user logged in, stop the timer
+        clearInterval(window.tokenExpirationTimer);
+        window.tokenExpirationTimer = null;
+      }
+    }, tokenCheckInterval);
+    
+    return window.tokenExpirationTimer;
   },
 };
 
