@@ -20,6 +20,7 @@ db.seat = require("./seat.model.js")(sequelize, Sequelize);
 db.booking = require("./booking.model.js")(sequelize, Sequelize);
 db.request = require("./request.model.js")(sequelize, Sequelize);
 db.auditLog = require("./audit_log.model.js")(sequelize, Sequelize);
+db.refreshToken = require("./refreshToken.model.js")(sequelize, Sequelize);
 
 // Role-User relationship (many-to-many)
 db.role.belongsToMany(db.user, {
@@ -52,6 +53,10 @@ db.request.belongsTo(db.user, { foreignKey: "userId" });
 // Manager-Request relationship (one-to-many)
 db.user.hasMany(db.request, { as: "managedRequests", foreignKey: "managerId" });
 db.request.belongsTo(db.user, { as: "manager", foreignKey: "managerId" });
+
+// User-RefreshToken relationship (one-to-many)
+db.user.hasMany(db.refreshToken);
+db.refreshToken.belongsTo(db.user);
 
 // Define ENUM for roles
 db.ROLES = ["admin", "manager", "employee"];

@@ -50,7 +50,48 @@ exports.signup = async (req, res) => {
       req.userId // Creator ID if authenticated
     );
 
-    return apiResponse.created(res, "User registered successfully", user);
+    // Check if auto-booking preferences are properly set
+    const autoBookingMessage =
+      req.body.defaultWorkDays && req.body.requiredDaysPerWeek
+        ? "User registered and auto-bookings created successfully"
+        : "User registered successfully, but auto-bookings could not be created due to missing preferences";
+
+    return apiResponse.created(res, autoBookingMessage, user);
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Handles refresh token to get a new access token
+ */
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return apiResponse.badRequest(res, "Refresh Token is required");
+    }
+
+    const result = await authService.refreshToken(refreshToken);
+
+    if (!result.success) {
+      return apiResponse.unauthorized(res, result.message);
+    }
+
+    return apiResponse.success(res, "Token refreshed successfully", result);
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Handles user logout
+ */
+exports.logout = async (req, res) => {
+  try {
+    const result = await authService.logout(req.userId);
+    return apiResponse.success(res, "Logout successful", result);
   } catch (error) {
     return apiResponse.serverError(res, error);
   }

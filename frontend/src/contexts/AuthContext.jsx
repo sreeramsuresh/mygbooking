@@ -21,7 +21,36 @@ export const AuthProvider = ({ children }) => {
 
           // Check if token exists
           if (parsedUser.accessToken) {
-            setUser(parsedUser);
+            // Check if token is expired
+            if (authService.isTokenExpired(parsedUser.accessToken)) {
+              // Token is expired, try to refresh it
+              if (parsedUser.refreshToken) {
+                try {
+                  const response = await authService.refreshToken(
+                    parsedUser.refreshToken
+                  );
+                  if (response.success) {
+                    // Token successfully refreshed, update user
+                    setUser(parsedUser);
+                  } else {
+                    // Refresh failed, clear localStorage
+                    localStorage.removeItem("user");
+                  }
+                } catch (refreshError) {
+                  console.error(
+                    "Error refreshing token on startup:",
+                    refreshError
+                  );
+                  localStorage.removeItem("user");
+                }
+              } else {
+                // No refresh token, clear localStorage
+                localStorage.removeItem("user");
+              }
+            } else {
+              // Token is still valid
+              setUser(parsedUser);
+            }
           } else {
             localStorage.removeItem("user");
           }
@@ -49,7 +78,6 @@ export const AuthProvider = ({ children }) => {
 
       if (response.success) {
         setUser(response.data);
-        localStorage.setItem("user", JSON.stringify(response.data));
         return { success: true };
       } else {
         setError(response.message || "Login failed");
@@ -94,9 +122,15 @@ export const AuthProvider = ({ children }) => {
   /**
    * Logout user
    */
-  const logout = useCallback(() => {
-    localStorage.removeItem("user");
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+      setUser(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if there's an error, we should still clear the local state
+      setUser(null);
+    }
   }, []);
 
   /**
@@ -141,6 +175,31 @@ export const AuthProvider = ({ children }) => {
     [user]
   );
 
+  /**
+   * Refresh access token
+   */
+  const refreshToken = useCallback(async () => {
+    if (!user || !user.refreshToken) return false;
+
+    try {
+      const response = await authService.refreshToken(user.refreshToken);
+      if (response.success) {
+        // Update user with new tokens
+        const updatedUser = {
+          ...user,
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken,
+        };
+        setUser(updatedUser);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      return false;
+    }
+  }, [user]);
+
   // Prepare context value
   const value = {
     user,
@@ -151,6 +210,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     hasRole,
+    refreshToken,
     isAuthenticated: !!user,
     isAdmin: hasRole("admin"),
     isManager: hasRole("manager") || hasRole("admin"),

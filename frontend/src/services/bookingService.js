@@ -1,27 +1,13 @@
 // frontend/src/services/bookingService.js
-import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { API_URL } from "../config";
 
 const API_ENDPOINT = `${API_URL}/bookings`;
 
-// Request interceptor to add auth token
-axios.interceptors.request.use(
-  (config) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user && user.accessToken) {
-      config.headers["Authorization"] = `Bearer ${user.accessToken}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 const bookingService = {
   createBooking: async (seatId, bookingDate) => {
     try {
-      const response = await axios.post(API_ENDPOINT, {
+      const response = await axiosInstance.post(API_ENDPOINT, {
         seatId,
         bookingDate,
       });
@@ -33,10 +19,13 @@ const bookingService = {
       throw error;
     }
   },
-  
+
   updateBooking: async (bookingId, updates) => {
     try {
-      const response = await axios.put(`${API_ENDPOINT}/${bookingId}`, updates);
+      const response = await axiosInstance.put(
+        `${API_ENDPOINT}/${bookingId}`,
+        updates
+      );
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -49,7 +38,7 @@ const bookingService = {
   getMyBookings: async (filters = {}) => {
     try {
       // Fetch the bookings
-      const response = await axios.get(`${API_ENDPOINT}/my`, {
+      const response = await axiosInstance.get(`${API_ENDPOINT}/my`, {
         params: filters,
       });
       return response.data;
@@ -63,9 +52,12 @@ const bookingService = {
 
   getAvailableSeats: async (date) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/available-seats`, {
-        params: { date },
-      });
+      const response = await axiosInstance.get(
+        `${API_ENDPOINT}/available-seats`,
+        {
+          params: { date },
+        }
+      );
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -77,9 +69,12 @@ const bookingService = {
 
   getWeeklyStatus: async (year, weekNumber) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/my-weekly-status`, {
-        params: { year, weekNumber },
-      });
+      const response = await axiosInstance.get(
+        `${API_ENDPOINT}/my-weekly-status`,
+        {
+          params: { year, weekNumber },
+        }
+      );
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -91,9 +86,12 @@ const bookingService = {
 
   cancelBooking: async (bookingId, reason) => {
     try {
-      const response = await axios.delete(`${API_ENDPOINT}/${bookingId}`, {
-        data: { reason },
-      });
+      const response = await axiosInstance.delete(
+        `${API_ENDPOINT}/${bookingId}`,
+        {
+          data: { reason },
+        }
+      );
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -105,7 +103,7 @@ const bookingService = {
 
   checkIn: async (bookingId) => {
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${API_ENDPOINT}/${bookingId}/check-in`
       );
       return response.data;
@@ -119,7 +117,7 @@ const bookingService = {
 
   checkOut: async (bookingId) => {
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${API_ENDPOINT}/${bookingId}/check-out`
       );
       return response.data;
@@ -133,7 +131,7 @@ const bookingService = {
 
   getBookingsByDate: async (date) => {
     try {
-      const response = await axios.get(`${API_ENDPOINT}/by-date`, {
+      const response = await axiosInstance.get(`${API_ENDPOINT}/by-date`, {
         params: { date },
       });
       return response.data;
@@ -147,9 +145,12 @@ const bookingService = {
 
   createAutoBookings: async (weekStartDate) => {
     try {
-      const response = await axios.post(`${API_ENDPOINT}/auto-bookings`, {
-        weekStartDate,
-      });
+      const response = await axiosInstance.post(
+        `${API_ENDPOINT}/auto-bookings`,
+        {
+          weekStartDate,
+        }
+      );
       return response.data;
     } catch (error) {
       if (error.response) {
@@ -158,13 +159,16 @@ const bookingService = {
       throw error;
     }
   },
-  
+
   resetAndAutoBook: async (userId, weekStartDate) => {
     try {
-      const response = await axios.post(`${API_ENDPOINT}/reset-auto-book`, {
-        userId,
-        weekStartDate,
-      });
+      const response = await axiosInstance.post(
+        `${API_ENDPOINT}/reset-auto-book`,
+        {
+          userId,
+          weekStartDate,
+        }
+      );
       return response.data;
     } catch (error) {
       if (error.response) {

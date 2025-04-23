@@ -25,8 +25,10 @@ exports.createBooking = async (req, res) => {
 
     return apiResponse.created(res, "Booking created successfully", booking);
   } catch (error) {
-    if (error.message.includes("already booked") || 
-        error.message.includes("already have a booking")) {
+    if (
+      error.message.includes("already booked") ||
+      error.message.includes("already have a booking")
+    ) {
       return apiResponse.badRequest(res, error.message);
     }
     return apiResponse.serverError(res, error);
@@ -44,10 +46,13 @@ exports.updateBooking = async (req, res) => {
     if (!bookingId) {
       return apiResponse.badRequest(res, "Booking ID is required");
     }
-    
+
     // Validate updates
     if (!updates.seatId && !updates.bookingDate) {
-      return apiResponse.badRequest(res, "At least one of seatId or bookingDate must be provided");
+      return apiResponse.badRequest(
+        res,
+        "At least one of seatId or bookingDate must be provided"
+      );
     }
 
     const booking = await bookingService.updateBooking(
@@ -276,40 +281,66 @@ exports.ensureUserAutoBookings = async (req, res) => {
   try {
     // Get the current user's ID from the request
     const userId = req.userId;
-    
+
     // Get today's date and find next Monday
     const today = new Date();
     const nextMonday = new Date(today);
     nextMonday.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7));
-    const weekStartDate = nextMonday.toISOString().split('T')[0];
-    
-    console.log(`Ensuring auto-bookings for user ${userId} starting from ${weekStartDate}`);
-    
+    const weekStartDate = nextMonday.toISOString().split("T")[0];
+
+    console.log(
+      `Ensuring auto-bookings for user ${userId} starting from ${weekStartDate}`
+    );
+
     // Check if bookings already exist for the next few weeks
     const nextFewWeeks = new Date(today);
     nextFewWeeks.setDate(today.getDate() + 28); // 4 weeks ahead
-    
+
     const existingBookings = await bookingService.getUserBookings(userId, {
-      startDate: today.toISOString().split('T')[0],
-      endDate: nextFewWeeks.toISOString().split('T')[0],
-      status: 'confirmed'
+      startDate: today.toISOString().split("T")[0],
+      endDate: nextFewWeeks.toISOString().split("T")[0],
+      status: "confirmed",
     });
-    
+
+    // If no bookings found for the user, create them automatically
+    if (existingBookings.length === 0) {
+      console.log(
+        `No bookings found for user ${userId} - creating auto-bookings`
+      );
+
+      // Create auto-bookings for this user based on their preferences
+      const results = await bookingService.createAutoBookingsForUser(
+        userId,
+        weekStartDate,
+        userId // self-performed
+      );
+
+      return apiResponse.success(
+        res,
+        "Auto-bookings created based on user preferences",
+        results
+      );
+    }
+
     // Check if they have bookings for week 2, 3, 4 (allow overrides for the upcoming week)
-    const hasBookingsForFutureWeeks = existingBookings.some(booking => {
+    const hasBookingsForFutureWeeks = existingBookings.some((booking) => {
       const bookingDate = new Date(booking.bookingDate);
-      return bookingDate > new Date(nextMonday.getTime() + 7 * 24 * 60 * 60 * 1000); // after next week
+      return (
+        bookingDate > new Date(nextMonday.getTime() + 7 * 24 * 60 * 60 * 1000)
+      ); // after next week
     });
-    
+
     if (hasBookingsForFutureWeeks) {
-      console.log(`User ${userId} already has bookings for future weeks - not creating auto-bookings`);
+      console.log(
+        `User ${userId} already has bookings for future weeks - not creating auto-bookings`
+      );
       return apiResponse.success(
         res,
         "User already has future bookings - not creating auto-bookings",
         { bookingsExist: true }
       );
     }
-    
+
     // Create auto-bookings for this user based on their preferences
     const results = await bookingService.createAutoBookingsForUser(
       userId,
@@ -323,7 +354,7 @@ exports.ensureUserAutoBookings = async (req, res) => {
       results
     );
   } catch (error) {
-    console.error('Error in ensureUserAutoBookings controller:', error);
+    console.error("Error in ensureUserAutoBookings controller:", error);
     return apiResponse.serverError(res, error);
   }
 };
@@ -339,20 +370,22 @@ exports.resetAndAutoBook = async (req, res) => {
     if (!weekStartDate) {
       return apiResponse.badRequest(res, "Week start date is required");
     }
-    
+
     if (!userId) {
       return apiResponse.badRequest(res, "User ID is required");
     }
-    
+
     // This is now an admin-only operation
-    if (!req.userRoles.includes('ROLE_ADMIN')) {
+    if (!req.userRoles.includes("ROLE_ADMIN")) {
       return apiResponse.forbidden(
         res,
         "Only administrators can perform auto-booking operations"
       );
     }
 
-    console.log(`Resetting and auto-booking for user ${userId} starting from ${weekStartDate}`);
+    console.log(
+      `Resetting and auto-booking for user ${userId} starting from ${weekStartDate}`
+    );
     const results = await bookingService.resetAndAutoBookForUser(
       userId,
       weekStartDate,
@@ -365,7 +398,7 @@ exports.resetAndAutoBook = async (req, res) => {
       results
     );
   } catch (error) {
-    console.error('Error in resetAndAutoBook controller:', error);
+    console.error("Error in resetAndAutoBook controller:", error);
     return apiResponse.serverError(res, error);
   }
 };
@@ -377,42 +410,50 @@ exports.resetAndAutoBook = async (req, res) => {
 exports.debugAutoBookingPrefs = async (req, res) => {
   try {
     // This is an admin-only operation
-    if (!req.userRoles.includes('ROLE_ADMIN') && !req.userRoles.includes('admin')) {
+    if (
+      !req.userRoles.includes("ROLE_ADMIN") &&
+      !req.userRoles.includes("admin")
+    ) {
       return apiResponse.forbidden(
         res,
         "Only administrators can access debugging information"
       );
     }
-    
+
     const db = require("../db/models");
     const User = db.user;
     const logger = require("../utils/logger");
-    
+
     // Get all users with their preferences
     const users = await User.findAll({
       attributes: [
-        'id', 'username', 'fullName', 'isActive', 
-        'defaultWorkDays', 'requiredDaysPerWeek'
+        "id",
+        "username",
+        "fullName",
+        "isActive",
+        "defaultWorkDays",
+        "requiredDaysPerWeek",
       ],
-      raw: true
+      raw: true,
     });
-    
+
     logger.info(`Found ${users.length} total users in the system`);
-    
+
     // Analyze each user's auto-booking preferences
-    const results = users.map(user => {
+    const results = users.map((user) => {
       // Check if user has valid preferences for auto-booking
-      const hasDefaultWorkDays = user.defaultWorkDays && 
-                               Array.isArray(user.defaultWorkDays) && 
-                               user.defaultWorkDays.length > 0;
-                               
-      const hasRequiredDays = user.requiredDaysPerWeek && 
-                             user.requiredDaysPerWeek > 0;
-      
-      const daysToBook = hasDefaultWorkDays ? 
-        user.defaultWorkDays.slice(0, user.requiredDaysPerWeek || 2) : 
-        [];
-        
+      const hasDefaultWorkDays =
+        user.defaultWorkDays &&
+        Array.isArray(user.defaultWorkDays) &&
+        user.defaultWorkDays.length > 0;
+
+      const hasRequiredDays =
+        user.requiredDaysPerWeek && user.requiredDaysPerWeek > 0;
+
+      const daysToBook = hasDefaultWorkDays
+        ? user.defaultWorkDays.slice(0, user.requiredDaysPerWeek || 2)
+        : [];
+
       return {
         id: user.id,
         username: user.username,
@@ -424,30 +465,35 @@ exports.debugAutoBookingPrefs = async (req, res) => {
           hasValidDefaultWorkDays: hasDefaultWorkDays,
           hasValidRequiredDays: hasRequiredDays,
           daysToBook: daysToBook,
-          isEligibleForAutoBooking: hasDefaultWorkDays && 
-                                  hasRequiredDays && 
-                                  daysToBook.length > 0 &&
-                                  user.isActive
-        }
+          isEligibleForAutoBooking:
+            hasDefaultWorkDays &&
+            hasRequiredDays &&
+            daysToBook.length > 0 &&
+            user.isActive,
+        },
       };
     });
-    
+
     // Count users eligible for auto-booking
-    const eligibleCount = results.filter(r => r.preferences.isEligibleForAutoBooking).length;
-    
-    logger.info(`Found ${eligibleCount} users eligible for auto-booking out of ${users.length} total users`);
-    
+    const eligibleCount = results.filter(
+      (r) => r.preferences.isEligibleForAutoBooking
+    ).length;
+
+    logger.info(
+      `Found ${eligibleCount} users eligible for auto-booking out of ${users.length} total users`
+    );
+
     return apiResponse.success(
       res,
       "User auto-booking preferences retrieved successfully",
       {
         totalUsers: users.length,
         eligibleForAutoBooking: eligibleCount,
-        userPreferences: results
+        userPreferences: results,
       }
     );
   } catch (error) {
-    console.error('Error in debugAutoBookingPrefs controller:', error);
+    console.error("Error in debugAutoBookingPrefs controller:", error);
     return apiResponse.serverError(res, error);
   }
 };
@@ -459,23 +505,28 @@ exports.debugAutoBookingPrefs = async (req, res) => {
 exports.forceAutoBookingForAll = async (req, res) => {
   try {
     // This is an admin-only operation
-    if (!req.userRoles.includes('ROLE_ADMIN') && !req.userRoles.includes('admin')) {
+    if (
+      !req.userRoles.includes("ROLE_ADMIN") &&
+      !req.userRoles.includes("admin")
+    ) {
       return apiResponse.forbidden(
         res,
         "Only administrators can force auto-booking"
       );
     }
-    
+
     const scheduler = require("../utils/scheduler");
     const logger = require("../utils/logger");
-    
+
     logger.info("Starting forced auto-booking process for all users");
-    
+
     // Use the centralized function that handles auto-booking for all users
     const result = await scheduler.processAutoBookingsForAllUsers();
-    
-    logger.info(`Force auto-booking complete with result: ${JSON.stringify(result)}`);
-    
+
+    logger.info(
+      `Force auto-booking complete with result: ${JSON.stringify(result)}`
+    );
+
     // Convert the result to the expected format
     const formattedResult = {
       successful: result.successCount || 0,
@@ -484,17 +535,17 @@ exports.forceAutoBookingForAll = async (req, res) => {
       details: {
         success: [],
         failed: [],
-        skipped: []
-      }
+        skipped: [],
+      },
     };
-    
+
     return apiResponse.success(
       res,
       "Force auto-booking process completed",
       formattedResult
     );
   } catch (error) {
-    console.error('Error in forceAutoBookingForAll controller:', error);
+    console.error("Error in forceAutoBookingForAll controller:", error);
     return apiResponse.serverError(res, error);
   }
 };

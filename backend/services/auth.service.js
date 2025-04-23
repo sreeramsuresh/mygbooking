@@ -5,6 +5,7 @@ const User = db.user;
 const Role = db.role;
 const AuditLog = db.auditLog;
 const bookingService = require("./booking.service");
+const refreshTokenService = require("./refreshToken.service");
 const { Op } = db.Sequelize;
 
 const bcrypt = require("bcryptjs");
@@ -45,6 +46,9 @@ const authenticateUser = async (login, password) => {
       expiresIn: config.jwtExpiration,
     });
 
+    // Create refresh token
+    const refreshToken = await refreshTokenService.createToken(user.id);
+
     // Get user roles
     const roles = await user.getRoles();
     const authorities = roles.map((role) => `ROLE_${role.name.toUpperCase()}`);
@@ -66,6 +70,54 @@ const authenticateUser = async (login, password) => {
       fullName: user.fullName,
       roles: authorities,
       accessToken: token,
+      refreshToken: refreshToken.token,
+      defaultWorkDays: user.defaultWorkDays,
+      requiredDaysPerWeek: user.requiredDaysPerWeek,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Refresh the access token using a refresh token
+ * @param {string} requestToken - The refresh token
+ * @returns {Object} New tokens
+ */
+const refreshToken = async (requestToken) => {
+  try {
+    // Find the refresh token in the database
+    const refreshToken = await refreshTokenService.findByToken(requestToken);
+
+    if (!refreshToken) {
+      return { success: false, message: "Refresh token not found" };
+    }
+
+    // Verify the token is not expired or revoked
+    if (!refreshTokenService.verifyExpiration(refreshToken)) {
+      return { success: false, message: "Refresh token was expired" };
+    }
+
+    const userId = refreshToken.userId;
+
+    // Find the user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+
+    // Generate a new access token
+    const newAccessToken = jwt.sign({ id: user.id }, config.secret, {
+      expiresIn: config.jwtExpiration,
+    });
+
+    // Optionally, you can create a new refresh token and revoke the old one
+    // for enhanced security, or just return the existing refresh token
+
+    return {
+      success: true,
+      accessToken: newAccessToken,
+      refreshToken: refreshToken.token,
     };
   } catch (error) {
     throw error;
@@ -135,7 +187,7 @@ const registerUser = async (
       });
     }
 
-    // Log user preferences - auto-booking must be manually done by admin
+    // Log user preferences
     console.log(
       `New user ${
         user.id
@@ -143,9 +195,35 @@ const registerUser = async (
         user.defaultWorkDays
       )}, requiredDaysPerWeek=${user.requiredDaysPerWeek}`
     );
-    console.log(`NOTE: Admin must manually trigger auto-booking for this user`);
 
-    // Auto-booking is now admin-only
+    // Automatically run auto-booking for this new user
+    try {
+      // Get today's date and find next Monday
+      const today = new Date();
+      const nextMonday = new Date(today);
+      nextMonday.setDate(today.getDate() + ((1 + 7 - today.getDay()) % 7));
+      const weekStartDate = nextMonday.toISOString().split("T")[0];
+
+      console.log(
+        `Automatically generating auto-bookings for new user ${user.id}`
+      );
+
+      // Create auto-bookings for this user based on their preferences
+      await bookingService.createAutoBookingsForUser(
+        user.id,
+        weekStartDate,
+        createdBy || user.id // Use the creator ID if available, otherwise the user's own ID
+      );
+
+      console.log(`Auto-bookings successfully created for new user ${user.id}`);
+    } catch (autoBookingError) {
+      console.error(
+        `Error generating auto-bookings for new user ${user.id}:`,
+        autoBookingError
+      );
+      // We don't throw the error here to allow the registration to complete
+      // even if auto-booking fails
+    }
 
     return {
       id: user.id,
@@ -159,7 +237,22 @@ const registerUser = async (
   }
 };
 
+/**
+ * Log out a user by revoking their refresh tokens
+ * @param {number} userId - The user ID
+ */
+const logout = async (userId) => {
+  try {
+    await refreshTokenService.revokeAllUserTokens(userId);
+    return { success: true, message: "User logged out successfully" };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   authenticateUser,
   registerUser,
+  refreshToken,
+  logout,
 };

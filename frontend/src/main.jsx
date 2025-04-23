@@ -11,12 +11,15 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import theme from "./styles/theme";
 import "./styles/index.css";
 
+// Initialize axios interceptors
+import "./utils/axiosInterceptor";
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter
       future={{
         v7_startTransition: true,
-        v7_relativeSplatPath: true
+        v7_relativeSplatPath: true,
       }}
     >
       <ThemeProvider theme={theme}>

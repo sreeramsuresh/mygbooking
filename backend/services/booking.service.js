@@ -53,13 +53,13 @@ const createBooking = async (userId, seatId, bookingDate, performedBy) => {
     if (userBooking) {
       throw new Error("You already have a booking for this date");
     }
-    
+
     // Get user and check their required days per week
     const user = await User.findByPk(userId);
     if (!user) {
       throw new Error("User not found");
     }
-    
+
     // Count existing bookings for this week
     const existingWeeklyBookings = await Booking.count({
       where: {
@@ -68,10 +68,12 @@ const createBooking = async (userId, seatId, bookingDate, performedBy) => {
         status: { [Op.ne]: "cancelled" },
       },
     });
-    
+
     // Check if user is exceeding their required days per week
     if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-      throw new Error(`You have already booked your required ${user.requiredDaysPerWeek} days for this week. Cancel an existing booking if you want to book a different day.`);
+      throw new Error(
+        `You have already booked your required ${user.requiredDaysPerWeek} days for this week. Cancel an existing booking if you want to book a different day.`
+      );
     }
 
     // Create the booking
@@ -117,7 +119,7 @@ const updateBooking = async (bookingId, updates, performedBy) => {
 
     // Store old values for audit log
     const oldValues = { ...booking.dataValues };
-    
+
     // If booking date is changing, check if user already has a booking for the new date
     if (updates.bookingDate && updates.bookingDate !== booking.bookingDate) {
       const userBookingOnNewDate = await Booking.findOne({
@@ -132,13 +134,13 @@ const updateBooking = async (bookingId, updates, performedBy) => {
       if (userBookingOnNewDate) {
         throw new Error("You already have a booking for the selected date");
       }
-      
+
       // If date is changing, recalculate week number
       if (!updates.weekNumber) {
         const newDate = new Date(updates.bookingDate);
         const newWeekNumber = getWeekNumber(newDate);
         updates.weekNumber = newWeekNumber;
-        
+
         // If moving to a different week, check required days
         if (newWeekNumber !== booking.weekNumber) {
           // Get user and check their required days per week
@@ -146,7 +148,7 @@ const updateBooking = async (bookingId, updates, performedBy) => {
           if (!user) {
             throw new Error("User not found");
           }
-          
+
           // Count existing bookings for the new week
           const existingWeeklyBookings = await Booking.count({
             where: {
@@ -156,10 +158,12 @@ const updateBooking = async (bookingId, updates, performedBy) => {
               id: { [Op.ne]: bookingId }, // Exclude current booking
             },
           });
-          
+
           // Check if user is exceeding their required days per week
           if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-            throw new Error(`You have already booked your required ${user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`);
+            throw new Error(
+              `You have already booked your required ${user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
+            );
           }
         }
       }
@@ -167,7 +171,7 @@ const updateBooking = async (bookingId, updates, performedBy) => {
 
     // Determine which date to use for seat availability check
     const dateToCheck = updates.bookingDate || booking.bookingDate;
-    
+
     // Check if changing seat and the new seat is available
     if (updates.seatId && updates.seatId !== booking.seatId) {
       const existingBooking = await Booking.findOne({
@@ -325,7 +329,7 @@ const getBookingsByDate = async (date) => {
 const getAvailableSeats = async (date) => {
   try {
     console.log(`Getting available seats for date: ${date}`);
-    
+
     // Get all active seats
     const allSeats = await Seat.findAll({
       where: {
@@ -334,9 +338,9 @@ const getAvailableSeats = async (date) => {
     });
 
     console.log(`Total active seats found: ${allSeats.length}`);
-    
+
     if (allSeats.length === 0) {
-      console.log('WARNING: No active seats found in the database!');
+      console.log("WARNING: No active seats found in the database!");
       // Even when no active seats, still check for bookings
       // This allows us to see booked seats even if there are no "available" seats in the system
       const bookings = await Booking.findAll({
@@ -351,7 +355,7 @@ const getAvailableSeats = async (date) => {
           },
         ],
       });
-      
+
       if (bookings.length > 0) {
         // Format booked seats even when no active seats
         const bookedSeatsInfo = bookings.map((booking) => ({
@@ -363,13 +367,13 @@ const getAvailableSeats = async (date) => {
           department: booking.user ? booking.user.department : null,
           bookingId: booking.id,
         }));
-        
+
         return {
           availableSeats: [],
           bookedSeats: bookedSeatsInfo,
           totalSeats: bookedSeatsInfo.length,
           bookedCount: bookedSeatsInfo.length,
-          availableCount: 0
+          availableCount: 0,
         };
       } else {
         // Return an empty response with proper structure if no seats and no bookings
@@ -378,7 +382,7 @@ const getAvailableSeats = async (date) => {
           bookedSeats: [],
           totalSeats: 0,
           bookedCount: 0,
-          availableCount: 0
+          availableCount: 0,
         };
       }
     }
@@ -401,11 +405,15 @@ const getAvailableSeats = async (date) => {
       ],
     });
 
-    console.log(`Bookings found for date ${date}: ${bookingsWithDetails.length}`);
+    console.log(
+      `Bookings found for date ${date}: ${bookingsWithDetails.length}`
+    );
 
     // Create a map of booked seat IDs
-    const bookedSeatIds = new Set(bookingsWithDetails.map((booking) => booking.seatId));
-    
+    const bookedSeatIds = new Set(
+      bookingsWithDetails.map((booking) => booking.seatId)
+    );
+
     // Format booked seats with user information
     const bookedSeatsWithInfo = bookingsWithDetails.map((booking) => ({
       id: booking.seat.id,
@@ -418,8 +426,10 @@ const getAvailableSeats = async (date) => {
     }));
 
     // Filter to only include available seats
-    const availableSeats = allSeats.filter(seat => !bookedSeatIds.has(seat.id));
-    
+    const availableSeats = allSeats.filter(
+      (seat) => !bookedSeatIds.has(seat.id)
+    );
+
     console.log(`Available seats for date ${date}: ${availableSeats.length}`);
 
     // Return both available and booked seats
@@ -428,7 +438,7 @@ const getAvailableSeats = async (date) => {
       bookedSeats: bookedSeatsWithInfo,
       totalSeats: allSeats.length,
       bookedCount: bookedSeatsWithInfo.length,
-      availableCount: availableSeats.length
+      availableCount: availableSeats.length,
     };
   } catch (error) {
     console.error(`Error getting available seats: ${error.message}`);
@@ -580,45 +590,48 @@ const createAutoBookings = async (weekStartDate, performedBy) => {
     // Find admin role to exclude admins from auto-booking
     const Role = db.role;
     const adminUserIds = [];
-    
+
     try {
       // Find admin role
       const adminRole = await Role.findOne({
         where: {
-          name: 'admin'
-        }
+          name: "admin",
+        },
       });
-      
+
       if (adminRole) {
         // Get the junction table that connects users and roles
-        const UserRoles = db.sequelize.models.user_roles || db.sequelize.models.userRoles;
-        
+        const UserRoles =
+          db.sequelize.models.user_roles || db.sequelize.models.userRoles;
+
         // Find admin users
         const adminUserRoles = await UserRoles.findAll({
           where: {
-            roleId: adminRole.id
-          }
+            roleId: adminRole.id,
+          },
         });
-        
+
         // Extract admin user IDs
-        adminUserRoles.forEach(ur => {
+        adminUserRoles.forEach((ur) => {
           adminUserIds.push(ur.userId);
         });
-        
-        console.log(`Excluding ${adminUserIds.length} admin users from auto-booking`);
+
+        console.log(
+          `Excluding ${adminUserIds.length} admin users from auto-booking`
+        );
       }
     } catch (roleError) {
       console.error("Error finding admin users:", roleError);
       // Continue with the process even if we can't identify admins
     }
-    
+
     // Get all active NON-ADMIN users
     const users = await User.findAll({
       where: {
         isActive: true,
         id: {
-          [Op.notIn]: adminUserIds.length > 0 ? adminUserIds : [0] // Use [0] to avoid empty IN clause
-        }
+          [Op.notIn]: adminUserIds.length > 0 ? adminUserIds : [0], // Use [0] to avoid empty IN clause
+        },
       },
     });
 
@@ -636,13 +649,13 @@ const createAutoBookings = async (weekStartDate, performedBy) => {
       try {
         // Get user's default work days (0 = Sunday, 1 = Monday, etc.)
         const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays
-        
+
         // Get user's required days per week
         const requiredDaysPerWeek = user.requiredDaysPerWeek || 2;
-        
+
         // Only use the required number of days from the default work days
         const daysToBook = defaultWorkDays.slice(0, requiredDaysPerWeek);
-        
+
         // Create bookings for each selected work day
         for (const dayOfWeek of daysToBook) {
           // Calculate the date for this day of the week
@@ -740,25 +753,25 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
     // Find all future bookings for the user
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const userBookings = await Booking.findAll({
       where: {
         userId,
-        bookingDate: { [Op.gte]: today.toISOString().split('T')[0] },
+        bookingDate: { [Op.gte]: today.toISOString().split("T")[0] },
         status: { [Op.ne]: "cancelled" },
       },
     });
-    
+
     // Cancel all existing bookings
     for (const booking of userBookings) {
       // Store old values for audit log
       const oldValues = { ...booking.dataValues };
-      
+
       // Cancel booking
       await booking.update({
         status: "cancelled",
       });
-      
+
       // Log the cancellation
       await AuditLog.create({
         entityType: "booking",
@@ -772,30 +785,30 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
         },
       });
     }
-    
+
     // Get the user
     const user = await User.findByPk(userId);
     if (!user) {
       throw new Error("User not found");
     }
-    
+
     const weekStart = new Date(weekStartDate);
     const weekNumber = getWeekNumber(weekStart);
     const year = weekStart.getFullYear();
-    
+
     const results = {
       success: [],
       failed: [],
       cancelled: userBookings.length,
     };
-    
+
     // Get user's default work days and required days per week
     const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5];
     const requiredDaysPerWeek = user.requiredDaysPerWeek || 2;
-    
+
     // Only use the required number of days
     const daysToBook = defaultWorkDays.slice(0, requiredDaysPerWeek);
-    
+
     // Create bookings for each selected work day
     for (const dayOfWeek of daysToBook) {
       // Calculate the date for this day of the week
@@ -803,18 +816,27 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
       bookingDate.setDate(
         weekStart.getDate() + ((dayOfWeek - weekStart.getDay() + 7) % 7)
       );
-      
+
       // Format date for database (YYYY-MM-DD)
       const formattedDate = bookingDate.toISOString().split("T")[0];
-      
+
       // Find available seats for this date
       const availableSeatsResponse = await getAvailableSeats(formattedDate);
-      
-      console.log(`Creating booking for user ${userId} on date ${formattedDate}`);
-      console.log('Available seats response:', JSON.stringify(availableSeatsResponse));
-      
+
+      console.log(
+        `Creating booking for user ${userId} on date ${formattedDate}`
+      );
+      console.log(
+        "Available seats response:",
+        JSON.stringify(availableSeatsResponse)
+      );
+
       // Make sure we have available seats and can access them
-      if (!availableSeatsResponse || !availableSeatsResponse.availableSeats || availableSeatsResponse.availableSeats.length === 0) {
+      if (
+        !availableSeatsResponse ||
+        !availableSeatsResponse.availableSeats ||
+        availableSeatsResponse.availableSeats.length === 0
+      ) {
         // No seats available
         console.log(`No seats available for ${formattedDate}`);
         results.failed.push({
@@ -823,10 +845,10 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
         });
         continue;
       }
-      
+
       // Choose the first available seat
       const seat = availableSeatsResponse.availableSeats[0];
-      
+
       // Create booking
       const booking = await Booking.create({
         userId,
@@ -836,7 +858,7 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
         status: "confirmed",
         isAutoBooked: true,
       });
-      
+
       // Log the action
       await AuditLog.create({
         entityType: "booking",
@@ -851,13 +873,13 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
           isAutoBooked: true,
         },
       });
-      
+
       results.success.push({
         date: formattedDate,
         seatNumber: seat.seatNumber,
       });
     }
-    
+
     return results;
   } catch (error) {
     throw error;
@@ -867,9 +889,13 @@ const resetAndAutoBookForUser = async (userId, weekStartDate, performedBy) => {
 /**
  * Creates automatic bookings for a specific user
  */
-const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => {
+const createAutoBookingsForUser = async (
+  userId,
+  weekStartDate,
+  performedBy
+) => {
   const logger = require("../utils/logger");
-  
+
   try {
     // Get the user
     const user = await User.findByPk(userId);
@@ -877,83 +903,162 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
       logger.error(`User ID ${userId} not found in database`);
       throw new Error("User not found");
     }
-    
+
     const weekStart = new Date(weekStartDate);
     const weekNumber = getWeekNumber(weekStart);
-    
+
     const results = {
       success: [],
       failed: [],
     };
-    
+
     // Get user's default work days and required days
     const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays
     const requiredDaysPerWeek = user.requiredDaysPerWeek || 2;
-    
-    logger.info(`Creating auto bookings for user ${userId} (${user.username}) with:`);
+
+    logger.info(
+      `Creating auto bookings for user ${userId} (${user.username}) with:`
+    );
     logger.info(`- Default work days: ${JSON.stringify(defaultWorkDays)}`);
     logger.info(`- Required days per week: ${requiredDaysPerWeek}`);
-    
+
     // Validate user preferences
-    if (!defaultWorkDays || !Array.isArray(defaultWorkDays) || defaultWorkDays.length === 0) {
-      logger.error(`Invalid defaultWorkDays for user ${userId}: ${JSON.stringify(defaultWorkDays)}`);
+    if (
+      !defaultWorkDays ||
+      !Array.isArray(defaultWorkDays) ||
+      defaultWorkDays.length === 0
+    ) {
+      logger.error(
+        `Invalid defaultWorkDays for user ${userId}: ${JSON.stringify(
+          defaultWorkDays
+        )}`
+      );
       return {
         success: [],
-        failed: [{
-          reason: "Invalid or missing defaultWorkDays in user preferences"
-        }]
+        failed: [
+          {
+            reason: "Invalid or missing defaultWorkDays in user preferences",
+          },
+        ],
       };
     }
-    
+
     if (!requiredDaysPerWeek || requiredDaysPerWeek <= 0) {
-      logger.error(`Invalid requiredDaysPerWeek for user ${userId}: ${requiredDaysPerWeek}`);
+      logger.error(
+        `Invalid requiredDaysPerWeek for user ${userId}: ${requiredDaysPerWeek}`
+      );
       return {
         success: [],
-        failed: [{
-          reason: "Invalid or missing requiredDaysPerWeek in user preferences"
-        }]
+        failed: [
+          {
+            reason:
+              "Invalid or missing requiredDaysPerWeek in user preferences",
+          },
+        ],
       };
     }
-    
+
     // Use only the required number of days from the default days
     const daysToBook = defaultWorkDays.slice(0, requiredDaysPerWeek);
     logger.info(`- Days that will be booked: ${JSON.stringify(daysToBook)}`);
-    
+
     if (daysToBook.length === 0) {
-      logger.error(`No days to book for user ${userId} - defaultWorkDays may be empty or invalid`);
+      logger.error(
+        `No days to book for user ${userId} - defaultWorkDays may be empty or invalid`
+      );
       return {
         success: [],
-        failed: [{
-          reason: "No valid days to book - user preferences may not be set correctly"
-        }]
+        failed: [
+          {
+            reason:
+              "No valid days to book - user preferences may not be set correctly",
+          },
+        ],
       };
     }
-    
-    // Skip the first week (week 1) to allow for manual overrides
-    // Only auto-book weeks 2, 3, and 4
-    
+
+    // First check if the user already has bookings for the upcoming weeks
+    try {
+      // Get today's date and find next few weeks
+      const today = new Date();
+      const fourWeeksLater = new Date(today);
+      fourWeeksLater.setDate(today.getDate() + 28); // 4 weeks ahead
+
+      // Format dates for the API
+      const startDate = today.toISOString().split("T")[0];
+      const endDate = fourWeeksLater.toISOString().split("T")[0];
+
+      logger.info(
+        `Checking existing bookings for user ${userId} from ${startDate} to ${endDate}`
+      );
+
+      // Get existing bookings
+      const existingBookings = await getUserBookings(userId, {
+        startDate: startDate,
+        endDate: endDate,
+        status: "confirmed",
+      });
+
+      // If user already has bookings for week 2, 3, 4 - skip creating new ones
+      if (existingBookings.length > 0) {
+        // But only skip if they have bookings after next week (allow overriding upcoming week)
+        const nextWeekStart = new Date(weekStart);
+        nextWeekStart.setDate(weekStart.getDate() + 7); // Start of week 2
+
+        const futureBookings = existingBookings.filter(
+          (booking) => new Date(booking.bookingDate) > nextWeekStart
+        );
+
+        if (futureBookings.length > 0) {
+          logger.info(
+            `User ${userId} already has ${futureBookings.length} future bookings - skipping auto-booking`
+          );
+          return {
+            success: [],
+            skipped: true,
+            message: "User already has future bookings",
+          };
+        }
+      }
+    } catch (checkError) {
+      logger.warn(
+        `Error checking existing bookings for user ${userId}:`,
+        checkError
+      );
+      // Continue with auto-booking attempt even if check fails
+    }
+
     // Create bookings for all weeks 1-4 (including the first week, contrary to what we discussed earlier)
     for (let weekOffset = 0; weekOffset < 4; weekOffset++) {
       const currentWeekStart = new Date(weekStart);
-      currentWeekStart.setDate(currentWeekStart.getDate() + (weekOffset * 7));
+      currentWeekStart.setDate(currentWeekStart.getDate() + weekOffset * 7);
       const currentWeekNumber = getWeekNumber(currentWeekStart);
       const year = currentWeekStart.getFullYear();
-      
-      logger.info(`Processing week ${weekOffset+1} (offset ${weekOffset}) starting ${currentWeekStart.toISOString().split('T')[0]}`);
-      
+
+      logger.info(
+        `Processing week ${weekOffset + 1} (offset ${weekOffset}) starting ${
+          currentWeekStart.toISOString().split("T")[0]
+        }`
+      );
+
       // Create bookings for each selected work day in this week
       for (const dayOfWeek of daysToBook) {
         // Calculate the date for this day of the week
         const bookingDate = new Date(currentWeekStart);
         bookingDate.setDate(
-          currentWeekStart.getDate() + ((dayOfWeek - currentWeekStart.getDay() + 7) % 7)
+          currentWeekStart.getDate() +
+            ((dayOfWeek - currentWeekStart.getDay() + 7) % 7)
         );
-        
+
         // Format date for database (YYYY-MM-DD)
         const formattedDate = bookingDate.toISOString().split("T")[0];
-        
-        logger.info(`Week ${weekOffset+1}: Attempting to book day ${dayOfWeek} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]}) on ${formattedDate}`);
-        
+
+        logger.info(
+          `Week ${weekOffset + 1}: Attempting to book day ${dayOfWeek} (${
+            ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dayOfWeek]
+          }) on ${formattedDate}`
+        );
+
         // Check if user already has a booking for this date
         const existingBooking = await Booking.findOne({
           where: {
@@ -962,19 +1067,25 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
             status: { [Op.ne]: "cancelled" },
           },
         });
-        
+
         // Skip if already booked
         if (existingBooking) {
-          logger.info(`User ${userId} already has booking ID ${existingBooking.id} for date ${formattedDate} - skipping`);
+          logger.info(
+            `User ${userId} already has booking ID ${existingBooking.id} for date ${formattedDate} - skipping`
+          );
           continue;
         }
-        
+
         try {
           // Find an available seat
           logger.info(`Looking for available seats on ${formattedDate}`);
           const availableSeatsData = await getAvailableSeats(formattedDate);
-          
-          if (!availableSeatsData || !availableSeatsData.availableSeats || availableSeatsData.availableSeats.length === 0) {
+
+          if (
+            !availableSeatsData ||
+            !availableSeatsData.availableSeats ||
+            availableSeatsData.availableSeats.length === 0
+          ) {
             // No seats available
             logger.warn(`No seats available for date ${formattedDate}`);
             results.failed.push({
@@ -983,14 +1094,18 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
             });
             continue;
           }
-          
-          logger.info(`Found ${availableSeatsData.availableSeats.length} available seats for date ${formattedDate}`);
-          
+
+          logger.info(
+            `Found ${availableSeatsData.availableSeats.length} available seats for date ${formattedDate}`
+          );
+
           // Choose the first available seat
           const seat = availableSeatsData.availableSeats[0];
-          
+
           // Create booking
-          logger.info(`Creating auto-booking for user ${userId}, seat ${seat.id}, date ${formattedDate}`);
+          logger.info(
+            `Creating auto-booking for user ${userId}, seat ${seat.id}, date ${formattedDate}`
+          );
           const booking = await Booking.create({
             userId,
             seatId: seat.id,
@@ -999,8 +1114,10 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
             status: "confirmed",
             isAutoBooked: true,
           });
-          logger.info(`Auto-booking created successfully with ID ${booking.id}`);
-          
+          logger.info(
+            `Auto-booking created successfully with ID ${booking.id}`
+          );
+
           // Log the action
           await AuditLog.create({
             entityType: "booking",
@@ -1015,13 +1132,17 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
               isAutoBooked: true,
             },
           });
-          
+
           results.success.push({
             date: formattedDate,
             seatNumber: seat.seatNumber,
+            bookingId: booking.id,
           });
         } catch (seatError) {
-          logger.error(`Error finding seats or creating booking for user ${userId} on date ${formattedDate}:`, seatError);
+          logger.error(
+            `Error finding seats or creating booking for user ${userId} on date ${formattedDate}:`,
+            seatError
+          );
           results.failed.push({
             date: formattedDate,
             reason: `Error: ${seatError.message}`,
@@ -1029,12 +1150,24 @@ const createAutoBookingsForUser = async (userId, weekStartDate, performedBy) => 
         }
       }
     }
-    
-    logger.info(`Auto-booking completed for user ${userId}: ${results.success.length} bookings created, ${results.failed.length} failed`);
+
+    logger.info(
+      `Auto-booking completed for user ${userId}: ${results.success.length} bookings created, ${results.failed.length} failed`
+    );
     return results;
   } catch (error) {
-    logger.error(`Unexpected error in createAutoBookingsForUser for user ${userId}:`, error);
-    throw error;
+    logger.error(
+      `Unexpected error in createAutoBookingsForUser for user ${userId}:`,
+      error
+    );
+    return {
+      success: [],
+      failed: [
+        {
+          reason: `Unexpected error: ${error.message}`,
+        },
+      ],
+    };
   }
 };
 
