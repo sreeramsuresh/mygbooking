@@ -27,6 +27,8 @@ import {
   Breadcrumbs,
   Divider,
   Grid,
+  MenuItem,
+  Menu,
 } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -43,7 +45,9 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import AccessTimeFilledIcon from "@mui/icons-material/AccessTimeFilled";
 import HomeIcon from "@mui/icons-material/Home";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import { format, isAfter, isBefore, startOfToday, addDays } from "date-fns";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import { format, isAfter, isBefore, startOfToday, addDays, getDay } from "date-fns";
 import useBookings from "../../hooks/useBookings";
 import SeatSelector from "../../components/booking/SeatSelector";
 import BookingCalendar from "../../components/booking/BookingCalendar";
@@ -57,7 +61,8 @@ const MyBookings = () => {
     cancelBooking, 
     updateBooking, 
     getAvailableSeats,
-    resetAndAutoBook
+    resetAndAutoBook,
+    changeWorkDay
   } = useBookings();
   
   const navigate = useNavigate();
@@ -66,6 +71,7 @@ const MyBookings = () => {
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editSeatDialogOpen, setEditSeatDialogOpen] = useState(false);
+  const [changeWorkDayDialogOpen, setChangeWorkDayDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -79,6 +85,12 @@ const MyBookings = () => {
   const [seatsError, setSeatsError] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
+  const [changeWorkDayDate, setChangeWorkDayDate] = useState("");
+  const [availableWorkDays, setAvailableWorkDays] = useState([]);
+  const [isChangingWorkDay, setIsChangingWorkDay] = useState(false);
+  const [workDayChangeError, setWorkDayChangeError] = useState("");
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
 
   useEffect(() => {
     console.log("Fetching bookings...");
@@ -212,6 +224,83 @@ const MyBookings = () => {
     setIsDateChanging(true);
     setSelectedSeatId(""); // Clear selected seat when date changes
     loadAvailableSeats(dateString);
+  };
+  
+  const handleMenuOpen = (event, bookingId) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedBookingId(bookingId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedBookingId(null);
+  };
+  
+  const handleOpenChangeWorkDayDialog = (booking) => {
+    setSelectedBooking(booking);
+    setWorkDayChangeError("");
+    setChangeWorkDayDate("");
+    setIsChangingWorkDay(false);
+    
+    // Get current user preferences
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+    const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays
+    
+    // Filter available work days (exclude the current booking day)
+    const currentBookingDayOfWeek = getDay(new Date(booking.bookingDate));
+    const workDays = defaultWorkDays.filter(day => day !== currentBookingDayOfWeek);
+    
+    setAvailableWorkDays(workDays);
+    setChangeWorkDayDialogOpen(true);
+  };
+  
+  const handleCloseChangeWorkDayDialog = () => {
+    setChangeWorkDayDialogOpen(false);
+    setSelectedBooking(null);
+    setChangeWorkDayDate("");
+    setWorkDayChangeError("");
+  };
+  
+  const handleChangeWorkDayDateSelect = (date) => {
+    setChangeWorkDayDate(format(date, "yyyy-MM-dd"));
+  };
+  
+  const handleChangeWorkDay = async () => {
+    try {
+      setIsChangingWorkDay(true);
+      setWorkDayChangeError("");
+      
+      if (!changeWorkDayDate) {
+        setWorkDayChangeError("Please select a new date");
+        setIsChangingWorkDay(false);
+        return;
+      }
+      
+      // Call API to change workday
+      const response = await changeWorkDay(selectedBooking.id, changeWorkDayDate);
+      
+      if (response.success) {
+        // Close dialog and refresh bookings
+        handleCloseChangeWorkDayDialog();
+        await fetchMyBookings();
+        
+        // If the seat needs to be selected, open the edit seat dialog
+        if (response.data && response.data.needsSeatSelection) {
+          const updatedBooking = {
+            ...selectedBooking,
+            bookingDate: changeWorkDayDate,
+          };
+          handleOpenEditSeatDialog(updatedBooking);
+        }
+      } else {
+        setWorkDayChangeError(response.message || "Failed to change workday");
+      }
+    } catch (err) {
+      console.error("Error changing workday:", err);
+      setWorkDayChangeError("An unexpected error occurred");
+    } finally {
+      setIsChangingWorkDay(false);
+    }
   };
   
   
@@ -577,6 +666,46 @@ const MyBookings = () => {
                       ) : (
                         <>
                           {canEditBooking(booking) && (
+                            <>
+                              <IconButton
+                                color="primary"
+                                onClick={(e) => handleMenuOpen(e, booking.id)}
+                              >
+                                <MoreVertIcon />
+                              </IconButton>
+                              <Menu
+                                anchorEl={anchorEl}
+                                open={Boolean(anchorEl) && selectedBookingId === booking.id}
+                                onClose={handleMenuClose}
+                              >
+                                <MenuItem onClick={() => {
+                                  handleMenuClose();
+                                  handleOpenEditSeatDialog(booking);
+                                }}>
+                                  <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                                  Edit Booking
+                                </MenuItem>
+                                {booking.isAutoBooked && (
+                                  <MenuItem onClick={() => {
+                                    handleMenuClose();
+                                    handleOpenChangeWorkDayDialog(booking);
+                                  }}>
+                                    <SwapHorizIcon fontSize="small" sx={{ mr: 1 }} />
+                                    Change Workday
+                                  </MenuItem>
+                                )}
+                                <MenuItem onClick={() => {
+                                  handleMenuClose();
+                                  handleOpenCancelDialog(booking);
+                                }}>
+                                  <CancelIcon fontSize="small" sx={{ mr: 1 }} color="error" />
+                                  Cancel Booking
+                                </MenuItem>
+                              </Menu>
+                            </>
+                          )}
+                          {/* Legacy actions below - keeping for now */}
+                          {false && canEditBooking(booking) && (
                             <Tooltip title="Modify Booking">
                               <IconButton
                                 color="primary"
@@ -793,6 +922,98 @@ const MyBookings = () => {
             disabled={isUpdating || !selectedSeatId}
           >
             {isUpdating ? <CircularProgress size={24} /> : "Update Booking"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Change Workday Dialog */}
+      <Dialog
+        open={changeWorkDayDialogOpen}
+        onClose={handleCloseChangeWorkDayDialog}
+        aria-labelledby="change-workday-dialog-title"
+        fullWidth
+      >
+        <DialogTitle id="change-workday-dialog-title">Change Workday</DialogTitle>
+        <DialogContent>
+          {selectedBooking && (
+            <>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Current Workday:
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <CalendarMonthIcon color="primary" />
+                  <Typography variant="body1">
+                    {format(
+                      new Date(selectedBooking.bookingDate),
+                      "EEEE, MMMM d, yyyy"
+                    )}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <EventSeatIcon color="primary" />
+                  <Typography variant="body1">
+                    Seat: {selectedBooking.seat.seatNumber}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {workDayChangeError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {workDayChangeError}
+                </Alert>
+              )}
+              
+              <Divider sx={{ my: 2 }}>
+                <Chip label="Select New Workday" />
+              </Divider>
+              
+              <Typography variant="subtitle1" gutterBottom>
+                Your other preferred days:
+              </Typography>
+              
+              <Box sx={{ mb: 3 }}>
+                {(() => {
+                  // Get days of week names
+                  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                  
+                  // Find next occurrence of each day
+                  const today = new Date();
+                  const currentDay = getDay(today);
+                  const selectedDay = getDay(new Date(selectedBooking.bookingDate));
+                  
+                  return (
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <BookingCalendar
+                        onDateSelect={(date) => handleChangeWorkDayDateSelect(date)}
+                        minDate={addDays(new Date(), 1)}
+                        maxDate={addDays(new Date(), 30)}
+                        selectedDate={changeWorkDayDate}
+                        highlightDays={availableWorkDays}
+                      />
+                    </LocalizationProvider>
+                  );
+                })()}
+              </Box>
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Please select a date that corresponds to one of your preferred work days.
+                  If the seat you currently have is already booked for the new date, you'll need to select a new seat.
+                </Typography>
+              </Alert>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseChangeWorkDayDialog}>Cancel</Button>
+          <Button
+            onClick={handleChangeWorkDay}
+            variant="contained"
+            color="primary"
+            disabled={isChangingWorkDay || !changeWorkDayDate}
+          >
+            {isChangingWorkDay ? <CircularProgress size={24} /> : "Change Workday"}
           </Button>
         </DialogActions>
       </Dialog>

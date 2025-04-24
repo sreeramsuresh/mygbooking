@@ -250,6 +250,111 @@ const cancelBooking = async (bookingId, reason, performedBy) => {
 };
 
 /**
+ * Changes an auto-booked day to another day within user's preferences
+ */
+const changeWorkDay = async (bookingId, newDate, performedBy) => {
+  try {
+    const booking = await Booking.findByPk(bookingId, {
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'defaultWorkDays', 'requiredDaysPerWeek']
+        }
+      ]
+    });
+
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    if (booking.status === "cancelled") {
+      throw new Error("Cannot change a cancelled booking");
+    }
+
+    // Store old values for audit log
+    const oldValues = { ...booking.dataValues };
+    const oldDate = new Date(booking.bookingDate);
+    const newDateObj = new Date(newDate);
+    
+    // Check if user already has a booking for the new date
+    const userBookingOnNewDate = await Booking.findOne({
+      where: {
+        userId: booking.userId,
+        bookingDate: newDate,
+        status: { [Op.ne]: "cancelled" },
+        id: { [Op.ne]: bookingId },
+      },
+    });
+
+    if (userBookingOnNewDate) {
+      throw new Error("You already have a booking for the selected date");
+    }
+    
+    // Calculate week number for the new date
+    const newWeekNumber = getWeekNumber(newDateObj);
+
+    // If the week is different, enforce booking constraints
+    if (newWeekNumber !== booking.weekNumber) {
+      // Count existing bookings for the new week
+      const existingWeeklyBookings = await Booking.count({
+        where: {
+          userId: booking.userId,
+          weekNumber: newWeekNumber,
+          status: { [Op.ne]: "cancelled" },
+          id: { [Op.ne]: bookingId }, // Exclude current booking
+        },
+      });
+
+      // Check if user is exceeding their required days per week
+      if (existingWeeklyBookings >= booking.user.requiredDaysPerWeek) {
+        throw new Error(
+          `You have already booked your required ${booking.user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
+        );
+      }
+    }
+    
+    // Check if any user has booked this user's current seat on the new date
+    const existingSeatBooking = await Booking.findOne({
+      where: {
+        seatId: booking.seatId,
+        bookingDate: newDate,
+        status: { [Op.ne]: "cancelled" },
+      },
+    });
+
+    // Update booking with new date and week number
+    const updates = {
+      bookingDate: newDate,
+      weekNumber: newWeekNumber,
+      // If the seat is already taken for the new date, we'll need to put this booking in pending state
+      status: existingSeatBooking ? "pending" : "confirmed"
+    };
+    
+    await booking.update(updates);
+
+    // Log the action
+    await AuditLog.create({
+      entityType: "booking",
+      entityId: booking.id,
+      action: "change_workday",
+      performedBy,
+      oldValues,
+      newValues: updates,
+    });
+
+    return {
+      ...booking.dataValues,
+      needsSeatSelection: !!existingSeatBooking,
+      message: existingSeatBooking ? 
+        "Your preferred seat is already booked for the selected date. Please select a new seat." : 
+        "Workday changed successfully."
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Gets all bookings for a user
  */
 const getUserBookings = async (userId, filters = {}) => {
@@ -1187,4 +1292,5 @@ module.exports = {
   resetAndAutoBookForUser,
   createAutoBookingsForUser,
   getWeekNumber,
+  changeWorkDay,
 };

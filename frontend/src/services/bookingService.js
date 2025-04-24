@@ -177,6 +177,23 @@ const bookingService = {
       throw error;
     }
   },
+  
+  changeWorkDay: async (bookingId, newDate) => {
+    try {
+      const response = await axiosInstance.post(
+        `${API_ENDPOINT}/${bookingId}/change-workday`,
+        {
+          newDate,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      throw error;
+    }
+  },
 };
 
 export default bookingService;

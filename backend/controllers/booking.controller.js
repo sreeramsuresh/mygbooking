@@ -549,3 +549,47 @@ exports.forceAutoBookingForAll = async (req, res) => {
     return apiResponse.serverError(res, error);
   }
 };
+
+/**
+ * Change an auto-booked workday to another day
+ * This allows users to change from one default workday to another
+ */
+exports.changeWorkDay = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { newDate } = req.body;
+
+    if (!bookingId) {
+      return apiResponse.badRequest(res, "Booking ID is required");
+    }
+
+    if (!newDate) {
+      return apiResponse.badRequest(res, "New date is required");
+    }
+
+    const result = await bookingService.changeWorkDay(
+      bookingId,
+      newDate,
+      req.userId
+    );
+
+    return apiResponse.success(
+      res, 
+      result.needsSeatSelection 
+        ? "Workday changed, but you need to select a new seat" 
+        : "Workday changed successfully", 
+      result
+    );
+  } catch (error) {
+    console.error("Error in changeWorkDay controller:", error);
+    if (
+      error.message.includes("already have a booking") ||
+      error.message.includes("not found") ||
+      error.message.includes("cancelled") ||
+      error.message.includes("required")
+    ) {
+      return apiResponse.badRequest(res, error.message);
+    }
+    return apiResponse.serverError(res, error);
+  }
+};

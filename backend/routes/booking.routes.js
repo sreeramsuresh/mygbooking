@@ -18,6 +18,7 @@ router.put("/:bookingId", controller.updateBooking);
 router.delete("/:bookingId", controller.cancelBooking);
 router.post("/:bookingId/check-in", controller.checkIn);
 router.post("/:bookingId/check-out", controller.checkOut);
+router.post("/:bookingId/change-workday", controller.changeWorkDay);
 router.post("/ensure-auto-bookings", controller.ensureUserAutoBookings); // New endpoint for ensuring user auto-bookings
 
 // Manager/Admin routes

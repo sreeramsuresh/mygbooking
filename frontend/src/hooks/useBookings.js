@@ -189,6 +189,25 @@ const useBookings = () => {
       setLoading(false);
     }
   }, [fetchMyBookings]);
+  
+  const changeWorkDay = useCallback(async (bookingId, newDate) => {
+    try {
+      console.log(`Changing workday for booking ${bookingId} to ${newDate}`);
+      const response = await bookingService.changeWorkDay(bookingId, newDate);
+      
+      if (response.success) {
+        // Refresh bookings after change
+        await fetchMyBookings();
+      }
+      return response;
+    } catch (err) {
+      console.error('Error changing workday:', err);
+      return {
+        success: false,
+        message: 'An error occurred while changing workday'
+      };
+    }
+  }, [fetchMyBookings]);
 
   return {
     myBookings,
@@ -201,7 +220,8 @@ const useBookings = () => {
     checkIn,
     checkOut,
     updateBooking,
-    resetAndAutoBook
+    resetAndAutoBook,
+    changeWorkDay
   };
 };
 
