@@ -262,7 +262,14 @@ const MyBookings = () => {
   };
   
   const handleChangeWorkDayDateSelect = (date) => {
-    setChangeWorkDayDate(format(date, "yyyy-MM-dd"));
+    // Check if date is a string or Date object and handle appropriately
+    if (typeof date === 'string') {
+      setChangeWorkDayDate(date);
+    } else if (date instanceof Date) {
+      setChangeWorkDayDate(format(date, "yyyy-MM-dd"));
+    } else {
+      console.error("Invalid date format received:", date);
+    }
   };
   
   const handleChangeWorkDay = async () => {
@@ -989,7 +996,15 @@ const MyBookings = () => {
                         minDate={addDays(new Date(), 1)}
                         maxDate={addDays(new Date(), 30)}
                         selectedDate={changeWorkDayDate}
-                        highlightDays={availableWorkDays}
+                        highlightedDates={availableWorkDays.map(day => {
+                          // Find next occurrence of each day
+                          const date = new Date();
+                          // If today is already that day, add 7 to get to next week
+                          const daysToAdd = (day - date.getDay() + 7) % 7 || 7;
+                          const targetDate = new Date(date);
+                          targetDate.setDate(date.getDate() + daysToAdd);
+                          return format(targetDate, "yyyy-MM-dd");
+                        })}
                       />
                     </LocalizationProvider>
                   );
