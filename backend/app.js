@@ -13,6 +13,7 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/desktop", require("./routes/desktop.routes"));
 
 // Logging
 if (process.env.NODE_ENV === "development") {

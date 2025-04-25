@@ -1,0 +1,328 @@
+// backend/controllers/desktop.controller.js
+const db = require("../db/models");
+const config = require("../config/auth.config");
+const User = db.user;
+const DesktopSession = db.desktopSession; // We'll need to create this model
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const apiResponse = require("../utils/apiResponse");
+
+/**
+ * Handle desktop application login
+ */
+exports.desktopLogin = async (req, res) => {
+  try {
+    const { email, password, macAddress, ssid } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !macAddress || !ssid) {
+      return apiResponse.badRequest(
+        res,
+        "Email, password, MAC address, and SSID are required"
+      );
+    }
+
+    // Validate SSID
+    if (ssid !== "Vadakkemadom 5G") {
+      return apiResponse.badRequest(res, "Invalid network connection");
+    }
+
+    // Find user by email
+    const user = await User.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      return apiResponse.unauthorized(res, "User not found");
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return apiResponse.unauthorized(res, "Account is inactive");
+    }
+
+    // Verify password
+    const passwordIsValid = bcrypt.compareSync(password, user.password);
+    if (!passwordIsValid) {
+      return apiResponse.unauthorized(res, "Invalid password");
+    }
+
+    // Check if user already has a desktop session with a different MAC address
+    const existingSession = await DesktopSession.findOne({
+      where: { userId: user.id, isActive: true },
+    });
+
+    if (existingSession && existingSession.macAddress !== macAddress) {
+      return apiResponse.badRequest(
+        res,
+        "User already registered with a different device"
+      );
+    }
+
+    // Generate non-expiring JWT token
+    const token = jwt.sign(
+      { id: user.id, isDesktopClient: true },
+      config.secret
+      // No expiresIn parameter, so token won't expire
+    );
+
+    // Create or update desktop session
+    if (existingSession) {
+      await existingSession.update({
+        token,
+        lastActivityAt: new Date(),
+      });
+    } else {
+      await DesktopSession.create({
+        userId: user.id,
+        macAddress,
+        ssid,
+        token,
+        isActive: true,
+        lastActivityAt: new Date(),
+      });
+    }
+
+    // Return user information and token
+    return apiResponse.success(res, "Login successful", {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      accessToken: token,
+    });
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Handle desktop application logout
+ */
+exports.desktopLogout = async (req, res) => {
+  try {
+    // Mark the desktop session as inactive
+    await DesktopSession.update(
+      { isActive: false },
+      { where: { userId: req.userId, isActive: true } }
+    );
+
+    return apiResponse.success(res, "Logout successful");
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+// Add to desktop.controller.js
+
+/**
+ * Track desktop connection/disconnection events
+ */
+exports.trackConnection = async (req, res) => {
+  try {
+    const {
+      event_type,
+      ssid,
+      email,
+      ip_address,
+      mac_address,
+      computer_name,
+      timestamp,
+      connection_duration,
+      connection_duration_formatted,
+      connection_start_time,
+      connection_start_time_formatted,
+    } = req.body;
+
+    // Validate required fields
+    if (!event_type || !ssid || !email || !mac_address) {
+      return apiResponse.badRequest(
+        res,
+        "Event type, SSID, email, and MAC address are required"
+      );
+    }
+
+    // Validate SSID
+    if (ssid !== "Vadakkemadom 5G") {
+      return apiResponse.badRequest(res, "Invalid network connection");
+    }
+
+    // Find user by email
+    const user = await User.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      return apiResponse.unauthorized(res, "User not found");
+    }
+
+    // Find desktop session for this user
+    const desktopSession = await DesktopSession.findOne({
+      where: {
+        userId: user.id,
+        macAddress: mac_address,
+        isActive: true,
+      },
+    });
+
+    if (!desktopSession) {
+      return apiResponse.badRequest(
+        res,
+        "No active session found for this device"
+      );
+    }
+
+    // Create attendance record
+    const AttendanceRecord = db.attendanceRecord; // Need to create this model
+
+    // Create or update attendance record
+    let record;
+
+    if (event_type === "connect") {
+      // Create a new connection record
+      record = await AttendanceRecord.create({
+        userId: user.id,
+        ssid,
+        ipAddress: ip_address,
+        macAddress: mac_address,
+        computerName: computer_name,
+        connectionStartTime: new Date(connection_start_time * 1000),
+        isActive: true,
+      });
+
+      // Update the session
+      await desktopSession.update({
+        lastActivityAt: new Date(),
+      });
+
+      return apiResponse.success(res, "Connection recorded successfully", {
+        recordId: record.id,
+      });
+    } else if (event_type === "disconnect") {
+      // Find the active connection record
+      record = await AttendanceRecord.findOne({
+        where: {
+          userId: user.id,
+          macAddress: mac_address,
+          isActive: true,
+        },
+        order: [["connectionStartTime", "DESC"]],
+      });
+
+      if (!record) {
+        return apiResponse.badRequest(
+          res,
+          "No active connection found to disconnect"
+        );
+      }
+
+      // Update the record with disconnect information
+      await record.update({
+        connectionEndTime: new Date(),
+        connectionDuration: connection_duration,
+        isActive: false,
+      });
+
+      return apiResponse.success(res, "Disconnection recorded successfully", {
+        recordId: record.id,
+        duration: connection_duration_formatted,
+      });
+    } else {
+      return apiResponse.badRequest(res, "Invalid event type");
+    }
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
+
+// Add this to desktop.controller.js
+
+/**
+ * Reset the MAC address for a specific user
+ * This allows the user to register with a new device
+ */
+exports.resetMacAddress = async (req, res) => {
+  try {
+    const { userId, email } = req.body;
+
+    // Check if user has admin permission to perform this action
+    if (
+      !req.userRoles.includes("ROLE_ADMIN") &&
+      !req.userRoles.includes("admin")
+    ) {
+      return apiResponse.forbidden(
+        res,
+        "Only administrators can reset MAC addresses"
+      );
+    }
+
+    // Find the user either by ID or email
+    let whereClause = {};
+    if (userId) {
+      whereClause.id = userId;
+    } else if (email) {
+      whereClause.email = email;
+    } else {
+      return apiResponse.badRequest(
+        res,
+        "Either userId or email must be provided"
+      );
+    }
+
+    const user = await User.findOne({ where: whereClause });
+
+    if (!user) {
+      return apiResponse.notFound(res, "User not found");
+    }
+
+    // Find all desktop sessions for this user
+    const sessions = await DesktopSession.findAll({
+      where: { userId: user.id },
+    });
+
+    if (sessions.length === 0) {
+      return apiResponse.notFound(
+        res,
+        "No desktop sessions found for this user"
+      );
+    }
+
+    // Deactivate all sessions for this user
+    await DesktopSession.update(
+      { isActive: false },
+      { where: { userId: user.id } }
+    );
+
+    // Log the action
+    const AuditLog = db.auditLog;
+    await AuditLog.create({
+      entityType: "user",
+      entityId: user.id,
+      action: "reset_mac_address",
+      performedBy: req.userId,
+      oldValues: {
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          macAddress: s.macAddress,
+          isActive: s.isActive,
+        })),
+      },
+      newValues: {
+        message: "All desktop sessions deactivated",
+      },
+    });
+
+    return apiResponse.success(
+      res,
+      "MAC address reset successful. User can now log in with a new device.",
+      {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        sessionsDeactivated: sessions.length,
+      }
+    );
+  } catch (error) {
+    return apiResponse.serverError(res, error);
+  }
+};
