@@ -22,7 +22,8 @@ import {
   SupervisorAccount as UsersIcon,
   FormatListBulleted as RequestsIcon,
   Settings as SettingsIcon,
-  AutoAwesome as AutoBookingIcon
+  AutoAwesome as AutoBookingIcon,
+  Computer as ComputerIcon
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
@@ -103,6 +104,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       text: "Auto-Booking",
       icon: <AutoBookingIcon />,
       path: "/admin/auto-booking",
+    },
+    {
+      text: "Desktop Sessions",
+      icon: <ComputerIcon />,
+      path: "/admin/desktop-sessions",
     },
   ];
 

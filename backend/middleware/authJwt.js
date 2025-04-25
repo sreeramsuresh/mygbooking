@@ -9,8 +9,13 @@ const config = require("../config/auth.config");
  * Verify JWT token middleware
  */
 const verifyToken = async (req, res, next) => {
-  const token =
-    req.headers["x-access-token"] || req.headers.authorization?.split(" ")[1];
+  let token =
+    req.headers["x-access-token"] || req.headers.authorization;
+
+  // Handle case where token is in Authorization header with Bearer prefix
+  if (token && token.startsWith('Bearer ')) {
+    token = token.slice(7); // Remove Bearer prefix
+  }
 
   if (!token) {
     return res.status(403).send({
@@ -21,20 +26,42 @@ const verifyToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.secret);
     req.userId = decoded.id;
-    
-    // Fetch user and roles for future middleware
+    req.isDesktopClient = decoded.isDesktopClient || false;
+
+    // If it's a desktop client, check if the token is still active in desktop sessions
+    if (req.isDesktopClient) {
+      const DesktopSession = db.desktopSession;
+      const session = await DesktopSession.findOne({
+        where: {
+          userId: req.userId,
+          token: token,
+          isActive: true,
+        },
+      });
+
+      if (!session) {
+        return res.status(401).send({
+          message: "Desktop session not found or has been logged out",
+        });
+      }
+
+      // Update last activity time
+      await session.update({ lastActivityAt: new Date() });
+    }
+
+    // Continue with the existing code...
     const user = await User.findByPk(req.userId);
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
-    
+
     // Add user roles to request for easier access in controllers
     const roles = await user.getRoles();
     req.userRoles = [
-      ...roles.map(role => role.name),
-      ...roles.map(role => `ROLE_${role.name.toUpperCase()}`)
+      ...roles.map((role) => role.name),
+      ...roles.map((role) => `ROLE_${role.name.toUpperCase()}`),
     ];
-    
+
     next();
   } catch (err) {
     return res.status(401).send({

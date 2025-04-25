@@ -61,4 +61,19 @@ db.refreshToken.belongsTo(db.user);
 // Define ENUM for roles
 db.ROLES = ["admin", "manager", "employee"];
 
+// Add to backend/db/models/index.js
+
+db.desktopSession = require("./desktopSession.model.js")(sequelize, Sequelize);
+db.attendanceRecord = require("./attendanceRecord.model.js")(
+  sequelize,
+  Sequelize
+);
+
+// Add relationships
+db.user.hasMany(db.desktopSession);
+db.desktopSession.belongsTo(db.user);
+
+db.user.hasMany(db.attendanceRecord);
+db.attendanceRecord.belongsTo(db.user);
+
 module.exports = db;
