@@ -13,7 +13,6 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/api/desktop", require("./routes/desktop.routes"));
 
 // Logging
 if (process.env.NODE_ENV === "development") {
@@ -28,6 +27,7 @@ app.use("/api/bookings", require("./routes/booking.routes"));
 app.use("/api/requests", require("./routes/request.routes"));
 app.use("/api/dashboard", require("./routes/dashboard.routes"));
 app.use("/api/users", require("./routes/user.routes"));
+app.use("/api/desktop", require("./routes/desktop.routes"));
 
 // Serve static files from the React frontend app
 if (process.env.NODE_ENV === "production") {

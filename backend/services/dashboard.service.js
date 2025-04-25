@@ -433,6 +433,22 @@ const getAdminDashboard = async () => {
       },
     });
 
+    // Get desktop session count
+    const desktopSessionCount = await db.desktopSession.count({
+      where: { isActive: true },
+    });
+
+    // Get attendance record count for today
+    const AttendanceRecord = db.attendanceRecord;
+    const attendanceRecordCountToday = await AttendanceRecord.count({
+      where: {
+        connectionStartTime: {
+          [Op.gte]: new Date(today.setHours(0, 0, 0, 0))
+        },
+        isActive: true,
+      },
+    });
+
     // Get weekly trend data
     const startOfWeek = new Date(today);
     startOfWeek.setDate(
@@ -489,6 +505,10 @@ const getAdminDashboard = async () => {
         regularization: pendingRegularizationCount,
         wfh: pendingWfhCount,
         total: pendingRegularizationCount + pendingWfhCount,
+      },
+      desktopSessions: {
+        activeSessions: desktopSessionCount,
+        todayConnections: attendanceRecordCountToday,
       },
       todayAttendance: todayAttendanceCount,
       weeklyTrend,

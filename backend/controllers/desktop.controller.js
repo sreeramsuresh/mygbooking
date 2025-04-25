@@ -326,3 +326,129 @@ exports.resetMacAddress = async (req, res) => {
     return apiResponse.serverError(res, error);
   }
 };
+
+/**
+ * Get all active desktop sessions (for admin)
+ */
+exports.getActiveSessions = async (req, res) => {
+  try {
+    // Check if user has admin permission to perform this action
+    if (
+      !req.userRoles.includes("ROLE_ADMIN") &&
+      !req.userRoles.includes("admin")
+    ) {
+      return apiResponse.forbidden(
+        res,
+        "Only administrators can view active desktop sessions"
+      );
+    }
+
+    // Get all active desktop sessions with user details
+    const activeSessions = await DesktopSession.findAll({
+      where: { isActive: true },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'email', 'fullName', 'department'],
+        }
+      ],
+      order: [['lastActivityAt', 'DESC']],
+    });
+
+    console.log(`Found ${activeSessions.length} active desktop sessions`);
+
+    // Get attendance records for these sessions
+    const sessionDetails = await Promise.all(
+      activeSessions.map(async (session) => {
+        try {
+          // Find the latest attendance record for this session
+          const AttendanceRecord = db.attendanceRecord;
+          const latestRecord = await AttendanceRecord.findOne({
+            where: {
+              userId: session.userId,
+              macAddress: session.macAddress,
+              isActive: true,
+            },
+            order: [['connectionStartTime', 'DESC']],
+          });
+
+          // Calculate connection duration if available
+          let connectionDuration = null;
+          let connectionDurationFormatted = null;
+          let connectionStartTime = null;
+          let connectionStartTimeFormatted = null;
+
+          if (latestRecord) {
+            connectionStartTime = Math.floor(latestRecord.connectionStartTime.getTime() / 1000);
+            connectionStartTimeFormatted = latestRecord.connectionStartTime.toISOString()
+              .replace('T', ' ')
+              .substring(0, 19);
+            
+            if (latestRecord.connectionDuration) {
+              connectionDuration = latestRecord.connectionDuration;
+              
+              // Format duration as HH:MM:SS
+              const hours = Math.floor(connectionDuration / 3600);
+              const minutes = Math.floor((connectionDuration % 3600) / 60);
+              const seconds = Math.floor(connectionDuration % 60);
+              connectionDurationFormatted = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+              // Calculate duration from start time until now
+              const now = new Date();
+              connectionDuration = (now.getTime() - latestRecord.connectionStartTime.getTime()) / 1000;
+              
+              // Format duration as HH:MM:SS
+              const hours = Math.floor(connectionDuration / 3600);
+              const minutes = Math.floor((connectionDuration % 3600) / 60);
+              const seconds = Math.floor(connectionDuration % 60);
+              connectionDurationFormatted = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+          }
+
+          return {
+            id: session.id,
+            event_type: latestRecord ? "connect" : "unknown",
+            ssid: session.ssid,
+            email: session.user ? session.user.email : null,
+            ip_address: latestRecord ? latestRecord.ipAddress : null,
+            mac_address: session.macAddress,
+            computer_name: latestRecord ? latestRecord.computerName : null,
+            timestamp: Math.floor(session.lastActivityAt.getTime() / 1000),
+            connection_duration: connectionDuration,
+            connection_duration_formatted: connectionDurationFormatted,
+            connection_start_time: connectionStartTime,
+            connection_start_time_formatted: connectionStartTimeFormatted,
+            user: session.user ? {
+              id: session.user.id,
+              username: session.user.username,
+              email: session.user.email,
+              fullName: session.user.fullName,
+              department: session.user.department,
+            } : null,
+            lastActivityAt: session.lastActivityAt
+          };
+        } catch (err) {
+          console.error("Error processing session details:", err);
+          return {
+            id: session.id,
+            ssid: session.ssid,
+            mac_address: session.macAddress,
+            event_type: "unknown",
+            error: "Failed to process session details"
+          };
+        }
+      })
+    );
+
+    return apiResponse.success(
+      res,
+      "Active desktop sessions retrieved successfully",
+      sessionDetails
+    );
+  } catch (error) {
+    console.error("Error in getActiveSessions:", error);
+    return apiResponse.serverError(res, error);
+  }
+};

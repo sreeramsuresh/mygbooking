@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Users from "./pages/Admin/Users";
 import Reports from "./pages/Admin/Reports";
 import AutoBookingManagement from "./pages/Admin/AutoBookingManagement";
+import DesktopSessions from "./pages/Admin/DesktopSessions";
 import NotFound from "./pages/NotFound";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ProtectedRoute from "./components/common/ProtectedRoute";
@@ -159,6 +160,15 @@ const App = () => {
           element={
             <ProtectedRoute requiredRoles={["admin"]}>
               <AutoBookingManagement />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/desktop-sessions"
+          element={
+            <ProtectedRoute requiredRoles={["admin"]}>
+              <DesktopSessions />
             </ProtectedRoute>
           }
         />

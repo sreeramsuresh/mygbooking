@@ -16,11 +16,17 @@ router.post(
   controller.trackConnection
 );
 
-// Add this route to backend/routes/desktop.routes.js
+// Admin routes
 router.post(
   "/reset-mac-address",
   [authJwt.verifyToken, authJwt.isAdmin],
   controller.resetMacAddress
+);
+
+router.get(
+  "/active-sessions",
+  [authJwt.verifyToken, authJwt.isAdmin],
+  controller.getActiveSessions
 );
 
 module.exports = router;

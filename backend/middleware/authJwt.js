@@ -9,8 +9,13 @@ const config = require("../config/auth.config");
  * Verify JWT token middleware
  */
 const verifyToken = async (req, res, next) => {
-  const token =
-    req.headers["x-access-token"] || req.headers.authorization?.split(" ")[1];
+  let token =
+    req.headers["x-access-token"] || req.headers.authorization;
+
+  // Handle case where token is in Authorization header with Bearer prefix
+  if (token && token.startsWith('Bearer ')) {
+    token = token.slice(7); // Remove Bearer prefix
+  }
 
   if (!token) {
     return res.status(403).send({
