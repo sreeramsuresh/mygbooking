@@ -140,14 +140,15 @@ const EmployeeDashboard = () => {
                       <EventSeatIcon sx={{ fontSize: 40 }} />
                     </Avatar>
                     <Typography variant="h5" gutterBottom>
-                      Seat {todayBooking.seat?.seatNumber || '?'}
+                      Seat {todayBooking.seat?.seatNumber || "?"}
                     </Typography>
                     <Typography
                       variant="subtitle1"
                       color="textSecondary"
                       gutterBottom
                     >
-                      {todayBooking.seat?.description || 'No description available'}
+                      {todayBooking.seat?.description ||
+                        "No description available"}
                     </Typography>
 
                     {todayBooking.checkInTime ? (
@@ -209,16 +210,15 @@ const EmployeeDashboard = () => {
                 }}
               >
                 <Typography variant="subtitle1" gutterBottom>
-                  Week {currentWeek?.weekNumber || '?'} ({
-                    currentWeek?.startDate ? 
-                    format(new Date(currentWeek.startDate), "MMM d") : 
-                    '?'
-                  }
-                  {" "} - {
-                    currentWeek?.endDate ? 
-                    format(new Date(currentWeek.endDate), "MMM d") : 
-                    '?'
-                  })
+                  Week {currentWeek?.weekNumber || "?"} (
+                  {currentWeek?.startDate
+                    ? format(new Date(currentWeek.startDate), "MMM d")
+                    : "?"}{" "}
+                  -{" "}
+                  {currentWeek?.endDate
+                    ? format(new Date(currentWeek.endDate), "MMM d")
+                    : "?"}
+                  )
                 </Typography>
 
                 <Box
@@ -309,63 +309,79 @@ const EmployeeDashboard = () => {
 
               {upcomingBookings && upcomingBookings.length > 0 ? (
                 <List>
-                  {upcomingBookings.map((booking) => booking && (
-                    <ListItem key={booking.id || Math.random()} divider>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: "primary.main" }}>
-                          <EventIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={booking.bookingDate ? format(
-                          new Date(booking.bookingDate),
-                          "EEEE, MMMM d"
-                        ) : 'Unknown date'}
-                        secondary={booking.seat ? 
-                          `Seat ${booking.seat.seatNumber || '?'} - ${booking.seat.description || 'No description'}` : 
-                          'No seat information'
-                        }
-                      />
-                      <Chip
-                        label={
-                          booking.isAutoBooked ? "Auto Booked" : "Manual Booking"
-                        }
-                        size="small"
-                        color={booking.isAutoBooked ? "info" : "success"}
-                      />
-                    </ListItem>
-                  ))}
+                  {upcomingBookings.map(
+                    (booking) =>
+                      booking && (
+                        <ListItem key={booking.id || Math.random()} divider>
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: "primary.main" }}>
+                              <EventIcon />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              booking.bookingDate
+                                ? format(
+                                    new Date(booking.bookingDate),
+                                    "EEEE, MMMM d"
+                                  )
+                                : "Unknown date"
+                            }
+                            secondary={
+                              booking.seat
+                                ? `Seat ${booking.seat.seatNumber || "?"} - ${
+                                    booking.seat.description || "No description"
+                                  }`
+                                : "No seat information"
+                            }
+                          />
+                          <Chip
+                            label={
+                              booking.isAutoBooked
+                                ? "Auto Booked"
+                                : "Manual Booking"
+                            }
+                            size="small"
+                            color={booking.isAutoBooked ? "info" : "success"}
+                          />
+                        </ListItem>
+                      )
+                  )}
                 </List>
-              ) : dashboardData && dashboardData.suggestedBookings && dashboardData.suggestedBookings.length > 0 ? (
+              ) : dashboardData &&
+                dashboardData.suggestedBookings &&
+                dashboardData.suggestedBookings.length > 0 ? (
                 <>
                   <Alert severity="info" sx={{ mb: 2 }}>
                     These dates are suggested based on your preferred days
                   </Alert>
                   <List>
-                    {dashboardData.suggestedBookings.map((suggestion, index) => (
-                      <ListItem key={`suggestion-${index}`} divider>
-                        <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: "action.disabled" }}>
-                            <EventIcon />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={format(
-                            new Date(suggestion.suggestedDate),
-                            "EEEE, MMMM d"
-                          )}
-                          secondary="No booking yet - click to book"
-                        />
-                        <Button 
-                          component={RouterLink} 
-                          to="/bookings/new" 
-                          variant="outlined" 
-                          size="small"
-                        >
-                          Book
-                        </Button>
-                      </ListItem>
-                    ))}
+                    {dashboardData.suggestedBookings.map(
+                      (suggestion, index) => (
+                        <ListItem key={`suggestion-${index}`} divider>
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: "action.disabled" }}>
+                              <EventIcon />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={format(
+                              new Date(suggestion.suggestedDate),
+                              "EEEE, MMMM d"
+                            )}
+                            secondary="No booking yet - click to book"
+                          />
+                          <Button
+                            component={RouterLink}
+                            to="/bookings/new"
+                            variant="outlined"
+                            size="small"
+                          >
+                            Book
+                          </Button>
+                        </ListItem>
+                      )
+                    )}
                   </List>
                 </>
               ) : (
@@ -413,54 +429,66 @@ const EmployeeDashboard = () => {
 
               {pendingRequests && pendingRequests.length > 0 ? (
                 <List>
-                  {pendingRequests.map((request) => request && (
-                    <ListItem key={request.id || Math.random()} divider>
-                      <ListItemAvatar>
-                        <Avatar
-                          sx={{
-                            bgcolor:
+                  {pendingRequests.map(
+                    (request) =>
+                      request && (
+                        <ListItem key={request.id || Math.random()} divider>
+                          <ListItemAvatar>
+                            <Avatar
+                              sx={{
+                                bgcolor:
+                                  request.type === "regularization"
+                                    ? "warning.main"
+                                    : "info.main",
+                              }}
+                            >
+                              <WorkIcon />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={`${
                               request.type === "regularization"
-                                ? "warning.main"
-                                : "info.main",
-                          }}
-                        >
-                          <WorkIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`${
-                          request.type === "regularization"
-                            ? "Regularization"
-                            : "Work From Home"
-                        } - ${request.date ? format(
-                          new Date(request.date),
-                          "EEE, MMM d"
-                        ) : 'Unknown date'}`}
-                        secondary={`Reason: ${request.reason ? request.reason.substring(
-                          0,
-                          30
-                        ) + '...' : 'No reason provided'}`}
-                      />
-                      <Chip
-                        label={(request.status || 'pending').toUpperCase()}
-                        size="small"
-                        color={
-                          !request.status || request.status === "pending"
-                            ? "warning"
-                            : request.status === "approved"
-                            ? "success"
-                            : "error"
-                        }
-                      />
-                    </ListItem>
-                  ))}
+                                ? "Regularization"
+                                : "Work From Home"
+                            } - ${
+                              request.date
+                                ? format(new Date(request.date), "EEE, MMM d")
+                                : "Unknown date"
+                            }`}
+                            secondary={`Reason: ${
+                              request.reason
+                                ? request.reason.substring(0, 30) + "..."
+                                : "No reason provided"
+                            }`}
+                          />
+                          <Chip
+                            label={(request.status || "pending").toUpperCase()}
+                            size="small"
+                            color={
+                              !request.status || request.status === "pending"
+                                ? "warning"
+                                : request.status === "approved"
+                                ? "success"
+                                : "error"
+                            }
+                          />
+                        </ListItem>
+                      )
+                  )}
                 </List>
               ) : (
                 <Box sx={{ py: 4, textAlign: "center" }}>
                   <Typography variant="body1" color="textSecondary">
                     You don't have any pending requests
                   </Typography>
-                  <Box sx={{ mt: 2, display: "flex", justifyContent: "center", gap: 2 }}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 2,
+                    }}
+                  >
                     <Button
                       variant="outlined"
                       component={RouterLink}
@@ -491,7 +519,7 @@ const EmployeeDashboard = () => {
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                {/* <Grid item xs={12} sm={6} md={3}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -501,7 +529,7 @@ const EmployeeDashboard = () => {
                   >
                     Book a Seat
                   </Button>
-                </Grid>
+                </Grid> */}
                 <Grid item xs={12} sm={6} md={3}>
                   <Button
                     fullWidth

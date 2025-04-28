@@ -47,24 +47,31 @@ import HomeIcon from "@mui/icons-material/Home";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import { format, isAfter, isBefore, startOfToday, addDays, getDay } from "date-fns";
+import {
+  format,
+  isAfter,
+  isBefore,
+  startOfToday,
+  addDays,
+  getDay,
+} from "date-fns";
 import useBookings from "../../hooks/useBookings";
 import SeatSelector from "../../components/booking/SeatSelector";
 import BookingCalendar from "../../components/booking/BookingCalendar";
 
 const MyBookings = () => {
-  const { 
-    myBookings, 
-    loading, 
-    error, 
-    fetchMyBookings, 
-    cancelBooking, 
-    updateBooking, 
+  const {
+    myBookings,
+    loading,
+    error,
+    fetchMyBookings,
+    cancelBooking,
+    updateBooking,
     getAvailableSeats,
     resetAndAutoBook,
-    changeWorkDay
+    changeWorkDay,
   } = useBookings();
-  
+
   const navigate = useNavigate();
 
   const [tabValue, setTabValue] = useState(0);
@@ -111,7 +118,8 @@ const MyBookings = () => {
       setFilteredBookings(
         myBookings.filter(
           (booking) =>
-            (booking.status !== "cancelled" || booking.status === "suggested") &&
+            (booking.status !== "cancelled" ||
+              booking.status === "suggested") &&
             !isBefore(new Date(booking.bookingDate), today)
         )
       );
@@ -149,7 +157,7 @@ const MyBookings = () => {
     setCancelReason("");
     setCancelError("");
   };
-  
+
   const handleOpenEditSeatDialog = async (booking) => {
     setSelectedBooking(booking);
     setSelectedSeatId(booking.seat.id);
@@ -158,35 +166,39 @@ const MyBookings = () => {
     setSeatsError("");
     setUpdateError("");
     setEditSeatDialogOpen(true);
-    
+
     await loadAvailableSeats(booking.bookingDate);
   };
-  
+
   const loadAvailableSeats = async (date) => {
     try {
       setIsLoadingSeats(true);
       const response = await getAvailableSeats(date);
-      
+
       if (response.success) {
-        if (response.data && typeof response.data === 'object' && response.data.availableSeats) {
+        if (
+          response.data &&
+          typeof response.data === "object" &&
+          response.data.availableSeats
+        ) {
           setAvailableSeats(response.data.availableSeats || []);
           setBookedSeats(response.data.bookedSeats || []);
-          
+
           // If we're editing an existing booking, add current seat to available seats for selection
           if (selectedBooking && date === selectedBooking.bookingDate) {
             const currentSeat = {
               id: selectedBooking.seat.id,
               seatNumber: selectedBooking.seat.seatNumber,
-              description: selectedBooking.seat.description || ""
+              description: selectedBooking.seat.description || "",
             };
-            
+
             // Check if the current seat is already in available seats
             const seatExists = response.data.availableSeats.some(
-              seat => seat.id === currentSeat.id
+              (seat) => seat.id === currentSeat.id
             );
-            
+
             if (!seatExists) {
-              setAvailableSeats(prevSeats => [...prevSeats, currentSeat]);
+              setAvailableSeats((prevSeats) => [...prevSeats, currentSeat]);
             }
           }
         } else {
@@ -202,7 +214,7 @@ const MyBookings = () => {
       setIsLoadingSeats(false);
     }
   };
-  
+
   const handleCloseEditSeatDialog = () => {
     setEditSeatDialogOpen(false);
     setSelectedBooking(null);
@@ -214,18 +226,18 @@ const MyBookings = () => {
     setSeatsError("");
     setUpdateError("");
   };
-  
+
   const handleSeatSelect = (seatId) => {
     setSelectedSeatId(seatId);
   };
-  
+
   const handleDateChange = (dateString) => {
     setSelectedBookingDate(dateString);
     setIsDateChanging(true);
     setSelectedSeatId(""); // Clear selected seat when date changes
     loadAvailableSeats(dateString);
   };
-  
+
   const handleMenuOpen = (event, bookingId) => {
     setAnchorEl(event.currentTarget);
     setSelectedBookingId(bookingId);
@@ -235,35 +247,37 @@ const MyBookings = () => {
     setAnchorEl(null);
     setSelectedBookingId(null);
   };
-  
+
   const handleOpenChangeWorkDayDialog = (booking) => {
     setSelectedBooking(booking);
     setWorkDayChangeError("");
     setChangeWorkDayDate("");
     setIsChangingWorkDay(false);
-    
+
     // Get current user preferences
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const defaultWorkDays = user.defaultWorkDays || [1, 2, 3, 4, 5]; // Default to weekdays
-    
+
     // Filter available work days (exclude the current booking day)
     const currentBookingDayOfWeek = getDay(new Date(booking.bookingDate));
-    const workDays = defaultWorkDays.filter(day => day !== currentBookingDayOfWeek);
-    
+    const workDays = defaultWorkDays.filter(
+      (day) => day !== currentBookingDayOfWeek
+    );
+
     setAvailableWorkDays(workDays);
     setChangeWorkDayDialogOpen(true);
   };
-  
+
   const handleCloseChangeWorkDayDialog = () => {
     setChangeWorkDayDialogOpen(false);
     setSelectedBooking(null);
     setChangeWorkDayDate("");
     setWorkDayChangeError("");
   };
-  
+
   const handleChangeWorkDayDateSelect = (date) => {
     // Check if date is a string or Date object and handle appropriately
-    if (typeof date === 'string') {
+    if (typeof date === "string") {
       setChangeWorkDayDate(date);
     } else if (date instanceof Date) {
       setChangeWorkDayDate(format(date, "yyyy-MM-dd"));
@@ -271,26 +285,29 @@ const MyBookings = () => {
       console.error("Invalid date format received:", date);
     }
   };
-  
+
   const handleChangeWorkDay = async () => {
     try {
       setIsChangingWorkDay(true);
       setWorkDayChangeError("");
-      
+
       if (!changeWorkDayDate) {
         setWorkDayChangeError("Please select a new date");
         setIsChangingWorkDay(false);
         return;
       }
-      
+
       // Call API to change workday
-      const response = await changeWorkDay(selectedBooking.id, changeWorkDayDate);
-      
+      const response = await changeWorkDay(
+        selectedBooking.id,
+        changeWorkDayDate
+      );
+
       if (response.success) {
         // Close dialog and refresh bookings
         handleCloseChangeWorkDayDialog();
         await fetchMyBookings();
-        
+
         // If the seat needs to be selected, open the edit seat dialog
         if (response.data && response.data.needsSeatSelection) {
           const updatedBooking = {
@@ -309,36 +326,37 @@ const MyBookings = () => {
       setIsChangingWorkDay(false);
     }
   };
-  
-  
+
   const handleUpdateSeat = async () => {
     if (!selectedBooking || !selectedSeatId) {
       setUpdateError("Please select a seat");
       return;
     }
-    
+
     // If nothing has changed, no need to update
-    if (selectedSeatId === selectedBooking.seat.id && 
-        selectedBookingDate === selectedBooking.bookingDate) {
+    if (
+      selectedSeatId === selectedBooking.seat.id &&
+      selectedBookingDate === selectedBooking.bookingDate
+    ) {
       handleCloseEditSeatDialog();
       return;
     }
-    
+
     try {
       setIsUpdating(true);
       setUpdateError("");
-      
+
       const updates = {
-        seatId: selectedSeatId
+        seatId: selectedSeatId,
       };
-      
+
       // Add booking date to updates if it has changed
       if (selectedBookingDate !== selectedBooking.bookingDate) {
         updates.bookingDate = selectedBookingDate;
       }
-      
+
       const response = await updateBooking(selectedBooking.id, updates);
-      
+
       if (response.success) {
         handleCloseEditSeatDialog();
         await fetchMyBookings();
@@ -385,7 +403,7 @@ const MyBookings = () => {
       !isBefore(new Date(booking.bookingDate), today)
     );
   };
-  
+
   const canEditBooking = (booking) => {
     // Only allow edits for upcoming bookings with confirmed status
     const today = startOfToday();
@@ -442,14 +460,14 @@ const MyBookings = () => {
             </IconButton>
           </Tooltip>
 
-          <Button
+          {/* <Button
             variant="contained"
             component={RouterLink}
             to="/bookings/new"
             startIcon={<AddIcon />}
           >
             New Booking
-          </Button>
+          </Button> */}
         </Box>
       </Box>
 
@@ -471,38 +489,60 @@ const MyBookings = () => {
           {error}
         </Alert>
       )}
-      
+
       {tabValue === 0 && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            {/* <Paper sx={{ p: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box>
                   <Typography variant="subtitle1" gutterBottom>
                     Book a seat
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    Create a new booking for a specific date and select your preferred seat.
+                    Create a new booking for a specific date and select your
+                    preferred seat.
                   </Typography>
                 </Box>
-                
-                {/* Show user's preferred days */}
-                <Box sx={{ textAlign: 'right' }}>
+
+                <Box sx={{ textAlign: "right" }}>
                   <Typography variant="body2" color="text.secondary">
                     Your preferred days:
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', mt: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 0.5,
+                      justifyContent: "flex-end",
+                      mt: 1,
+                    }}
+                  >
                     {(() => {
-                      const user = JSON.parse(localStorage.getItem("user")) || {};
+                      const user =
+                        JSON.parse(localStorage.getItem("user")) || {};
                       const days = user.defaultWorkDays || [1, 2, 3, 4, 5];
-                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                      
-                      return days.map(day => (
-                        <Chip 
-                          key={day} 
-                          label={dayNames[day]} 
-                          size="small" 
-                          color="primary" 
+                      const dayNames = [
+                        "Sun",
+                        "Mon",
+                        "Tue",
+                        "Wed",
+                        "Thu",
+                        "Fri",
+                        "Sat",
+                      ];
+
+                      return days.map((day) => (
+                        <Chip
+                          key={day}
+                          label={dayNames[day]}
+                          size="small"
+                          color="primary"
                           variant="outlined"
                         />
                       ));
@@ -510,7 +550,7 @@ const MyBookings = () => {
                   </Box>
                 </Box>
               </Box>
-              
+
               <Button
                 variant="contained"
                 component={RouterLink}
@@ -521,12 +561,11 @@ const MyBookings = () => {
               >
                 New Booking
               </Button>
-            </Paper>
+            </Paper> */}
           </Grid>
         </Grid>
       )}
 
-      
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
@@ -579,8 +618,8 @@ const MyBookings = () => {
                   </TableCell>
                   <TableCell>
                     {booking.isSuggested ? (
-                      <Button 
-                        variant="contained" 
+                      <Button
+                        variant="contained"
                         size="small"
                         component={RouterLink}
                         to={`/bookings/new?date=${booking.bookingDate}`}
@@ -598,11 +637,7 @@ const MyBookings = () => {
                   </TableCell>
                   <TableCell>
                     {booking.isSuggested ? (
-                      <Chip
-                        label="Suggested"
-                        color="secondary"
-                        size="small"
-                      />
+                      <Chip label="Suggested" color="secondary" size="small" />
                     ) : (
                       <Chip
                         label={
@@ -662,8 +697,8 @@ const MyBookings = () => {
                   {tabValue === 0 && (
                     <TableCell>
                       {booking.isSuggested ? (
-                        <Button 
-                          variant="outlined" 
+                        <Button
+                          variant="outlined"
                           size="small"
                           component={RouterLink}
                           to={`/bookings/new?date=${booking.bookingDate}`}
@@ -682,30 +717,46 @@ const MyBookings = () => {
                               </IconButton>
                               <Menu
                                 anchorEl={anchorEl}
-                                open={Boolean(anchorEl) && selectedBookingId === booking.id}
+                                open={
+                                  Boolean(anchorEl) &&
+                                  selectedBookingId === booking.id
+                                }
                                 onClose={handleMenuClose}
                               >
-                                <MenuItem onClick={() => {
-                                  handleMenuClose();
-                                  handleOpenEditSeatDialog(booking);
-                                }}>
+                                <MenuItem
+                                  onClick={() => {
+                                    handleMenuClose();
+                                    handleOpenEditSeatDialog(booking);
+                                  }}
+                                >
                                   <EditIcon fontSize="small" sx={{ mr: 1 }} />
                                   Edit Booking
                                 </MenuItem>
                                 {booking.isAutoBooked && (
-                                  <MenuItem onClick={() => {
-                                    handleMenuClose();
-                                    handleOpenChangeWorkDayDialog(booking);
-                                  }}>
-                                    <SwapHorizIcon fontSize="small" sx={{ mr: 1 }} />
+                                  <MenuItem
+                                    onClick={() => {
+                                      handleMenuClose();
+                                      handleOpenChangeWorkDayDialog(booking);
+                                    }}
+                                  >
+                                    <SwapHorizIcon
+                                      fontSize="small"
+                                      sx={{ mr: 1 }}
+                                    />
                                     Change Workday
                                   </MenuItem>
                                 )}
-                                <MenuItem onClick={() => {
-                                  handleMenuClose();
-                                  handleOpenCancelDialog(booking);
-                                }}>
-                                  <CancelIcon fontSize="small" sx={{ mr: 1 }} color="error" />
+                                <MenuItem
+                                  onClick={() => {
+                                    handleMenuClose();
+                                    handleOpenCancelDialog(booking);
+                                  }}
+                                >
+                                  <CancelIcon
+                                    fontSize="small"
+                                    sx={{ mr: 1 }}
+                                    color="error"
+                                  />
                                   Cancel Booking
                                 </MenuItem>
                               </Menu>
@@ -716,14 +767,16 @@ const MyBookings = () => {
                             <Tooltip title="Modify Booking">
                               <IconButton
                                 color="primary"
-                                onClick={() => handleOpenEditSeatDialog(booking)}
+                                onClick={() =>
+                                  handleOpenEditSeatDialog(booking)
+                                }
                                 sx={{ mr: 1 }}
                               >
                                 <EditIcon />
                               </IconButton>
                             </Tooltip>
                           )}
-                          
+
                           {canCancelBooking(booking) && (
                             <Tooltip title="Cancel Booking">
                               <IconButton
@@ -827,10 +880,10 @@ const MyBookings = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Edit Booking Dialog */}
-      <Dialog 
-        open={editSeatDialogOpen} 
+      <Dialog
+        open={editSeatDialogOpen}
         onClose={handleCloseEditSeatDialog}
         maxWidth="md"
         fullWidth
@@ -843,7 +896,9 @@ const MyBookings = () => {
                 <Typography variant="subtitle1" gutterBottom>
                   Current Booking:
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+                >
                   <CalendarMonthIcon color="primary" />
                   <Typography variant="body1">
                     {format(
@@ -852,7 +907,7 @@ const MyBookings = () => {
                     )}
                   </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <EventSeatIcon color="primary" />
                   <Typography variant="body1">
                     Seat: {selectedBooking.seat.seatNumber}
@@ -865,22 +920,22 @@ const MyBookings = () => {
                   {updateError}
                 </Alert>
               )}
-              
+
               {seatsError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {seatsError}
                 </Alert>
               )}
-              
+
               <Divider sx={{ my: 2 }}>
                 <Chip label="Select New Date and/or Seat" />
               </Divider>
-              
+
               {/* Date Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Select Date:
               </Typography>
-              
+
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Box sx={{ mb: 3 }}>
                   <BookingCalendar
@@ -891,12 +946,12 @@ const MyBookings = () => {
                   />
                 </Box>
               </LocalizationProvider>
-              
+
               {/* Seat Selection */}
               <Typography variant="subtitle1" gutterBottom>
                 Select Seat:
               </Typography>
-              
+
               {isLoadingSeats ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
@@ -932,7 +987,7 @@ const MyBookings = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Change Workday Dialog */}
       <Dialog
         open={changeWorkDayDialogOpen}
@@ -940,7 +995,9 @@ const MyBookings = () => {
         aria-labelledby="change-workday-dialog-title"
         fullWidth
       >
-        <DialogTitle id="change-workday-dialog-title">Change Workday</DialogTitle>
+        <DialogTitle id="change-workday-dialog-title">
+          Change Workday
+        </DialogTitle>
         <DialogContent>
           {selectedBooking && (
             <>
@@ -948,7 +1005,9 @@ const MyBookings = () => {
                 <Typography variant="subtitle1" gutterBottom>
                   Current Workday:
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
+                >
                   <CalendarMonthIcon color="primary" />
                   <Typography variant="body1">
                     {format(
@@ -957,7 +1016,7 @@ const MyBookings = () => {
                     )}
                   </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <EventSeatIcon color="primary" />
                   <Typography variant="body1">
                     Seat: {selectedBooking.seat.seatNumber}
@@ -970,33 +1029,45 @@ const MyBookings = () => {
                   {workDayChangeError}
                 </Alert>
               )}
-              
+
               <Divider sx={{ my: 2 }}>
                 <Chip label="Select New Workday" />
               </Divider>
-              
+
               <Typography variant="subtitle1" gutterBottom>
                 Your other preferred days:
               </Typography>
-              
+
               <Box sx={{ mb: 3 }}>
                 {(() => {
                   // Get days of week names
-                  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                  
+                  const dayNames = [
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                  ];
+
                   // Find next occurrence of each day
                   const today = new Date();
                   const currentDay = getDay(today);
-                  const selectedDay = getDay(new Date(selectedBooking.bookingDate));
-                  
+                  const selectedDay = getDay(
+                    new Date(selectedBooking.bookingDate)
+                  );
+
                   return (
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <BookingCalendar
-                        onDateSelect={(date) => handleChangeWorkDayDateSelect(date)}
+                        onDateSelect={(date) =>
+                          handleChangeWorkDayDateSelect(date)
+                        }
                         minDate={addDays(new Date(), 1)}
                         maxDate={addDays(new Date(), 30)}
                         selectedDate={changeWorkDayDate}
-                        highlightedDates={availableWorkDays.map(day => {
+                        highlightedDates={availableWorkDays.map((day) => {
                           // Find next occurrence of each day
                           const date = new Date();
                           // If today is already that day, add 7 to get to next week
@@ -1010,11 +1081,12 @@ const MyBookings = () => {
                   );
                 })()}
               </Box>
-              
+
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
-                  Please select a date that corresponds to one of your preferred work days.
-                  If the seat you currently have is already booked for the new date, you'll need to select a new seat.
+                  Please select a date that corresponds to one of your preferred
+                  work days. If the seat you currently have is already booked
+                  for the new date, you'll need to select a new seat.
                 </Typography>
               </Alert>
             </>
@@ -1028,7 +1100,11 @@ const MyBookings = () => {
             color="primary"
             disabled={isChangingWorkDay || !changeWorkDayDate}
           >
-            {isChangingWorkDay ? <CircularProgress size={24} /> : "Change Workday"}
+            {isChangingWorkDay ? (
+              <CircularProgress size={24} />
+            ) : (
+              "Change Workday"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
