@@ -58,9 +58,24 @@ const resetMacAddress = async (userData) => {
   }
 };
 
+// Get attendance history
+const getAttendanceHistory = async (params = {}) => {
+  try {
+    const response = await API.get('/desktop/attendance-history', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching attendance history:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Failed to fetch attendance history',
+    };
+  }
+};
+
 const desktopService = {
   getActiveSessions,
   resetMacAddress,
+  getAttendanceHistory,
 };
 
 export default desktopService;

@@ -156,7 +156,7 @@ class ConnectionDatabase:
 class WiFiMonitor:
     def __init__(self, app):
         self.app = app
-        self.target_ssid = app.config.get("target_ssid", "Vadakkemadom 5G")
+        self.target_ssid = app.config.get("target_ssid", "GIGLABZ_5G")
         self.current_ssid = None
         self.last_ssid = None
         self.is_connected_to_target = False
@@ -189,34 +189,90 @@ class WiFiMonitor:
         try:
             if platform.system() == "Windows":
                 # Windows implementation using netsh
-                output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], 
-                                                universal_newlines=True)
-                for line in output.split("\n"):
-                    if "SSID" in line and "BSSID" not in line:
-                        ssid = line.split(":", 1)[1].strip()
-                        return ssid if ssid else None
+                try:
+                    output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], 
+                                                   universal_newlines=True)
+                    for line in output.split("\n"):
+                        if "SSID" in line and "BSSID" not in line:
+                            ssid = line.split(":", 1)[1].strip()
+                            if ssid:
+                                self.app.log(f"Windows detected SSID: '{ssid}'")
+                                # Check if SSID is similar to target SSID (case insensitive and trimmed)
+                                target = self.app.config.get("target_ssid", "").strip().lower()
+                                current = ssid.strip().lower()
+                                if current == target:
+                                    self.app.log(f"SSID matches target (case-insensitive): '{ssid}'")
+                                    return self.app.config.get("target_ssid")  # Return the exact target SSID
+                                return ssid
+                except Exception as e:
+                    self.app.log(f"Error with Windows SSID detection: {str(e)}", "error")
+                
+                # Alternative approach using wmi if netsh fails
+                try:
+                    import wmi
+                    w = wmi.WMI()
+                    for network in w.Win32_NetworkAdapter():
+                        if network.NetConnectionStatus == 2:  # Connected
+                            ssid = network.NetConnectionID
+                            if ssid:
+                                self.app.log(f"WMI detected network: '{ssid}'")
+                                # Check if SSID is similar to target SSID
+                                target = self.app.config.get("target_ssid", "").strip().lower()
+                                current = ssid.strip().lower()
+                                if target in current or current in target:
+                                    self.app.log(f"WMI network similar to target: '{ssid}'")
+                                    return self.app.config.get("target_ssid")  # Return the exact target SSID
+                                return ssid
+                except ImportError:
+                    self.app.log("WMI module not available", "warning")
+                except Exception as e:
+                    self.app.log(f"Error with WMI network detection: {str(e)}", "error")
                         
             elif platform.system() == "Darwin":  # macOS
                 # macOS implementation using airport
-                airport_path = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-                output = subprocess.check_output([airport_path, "-I"], universal_newlines=True)
-                for line in output.split("\n"):
-                    if " SSID:" in line:
-                        ssid = line.split(":", 1)[1].strip()
-                        return ssid if ssid else None
+                try:
+                    airport_path = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+                    output = subprocess.check_output([airport_path, "-I"], universal_newlines=True)
+                    for line in output.split("\n"):
+                        if " SSID:" in line:
+                            ssid = line.split(":", 1)[1].strip()
+                            if ssid:
+                                self.app.log(f"macOS detected SSID: '{ssid}'")
+                                # Check if SSID is similar to target SSID
+                                target = self.app.config.get("target_ssid", "").strip().lower()
+                                current = ssid.strip().lower()
+                                if current == target:
+                                    self.app.log(f"SSID matches target (case-insensitive): '{ssid}'")
+                                    return self.app.config.get("target_ssid")  # Return the exact target SSID
+                                return ssid
+                except Exception as e:
+                    self.app.log(f"Error with macOS SSID detection: {str(e)}", "error")
                         
             else:  # Linux
                 # Linux implementation using nmcli
-                output = subprocess.check_output(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], 
-                                               universal_newlines=True)
-                for line in output.split("\n"):
-                    if line.startswith("yes:"):
-                        ssid = line.split(":", 1)[1].strip()
-                        return ssid if ssid else None
+                try:
+                    output = subprocess.check_output(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], 
+                                                   universal_newlines=True)
+                    for line in output.split("\n"):
+                        if line.startswith("yes:"):
+                            ssid = line.split(":", 1)[1].strip()
+                            if ssid:
+                                self.app.log(f"Linux detected SSID: '{ssid}'")
+                                # Check if SSID is similar to target SSID
+                                target = self.app.config.get("target_ssid", "").strip().lower()
+                                current = ssid.strip().lower()
+                                if current == target:
+                                    self.app.log(f"SSID matches target (case-insensitive): '{ssid}'")
+                                    return self.app.config.get("target_ssid")  # Return the exact target SSID
+                                return ssid
+                except Exception as e:
+                    self.app.log(f"Error with Linux SSID detection: {str(e)}", "error")
                         
-        except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        except Exception as e:
             self.app.log(f"Error getting WiFi SSID: {str(e)}", "error")
             
+        # If we're here, we couldn't get the SSID from any method
+        self.app.log("Couldn't detect SSID with any method", "warning")
         return None
         
     def get_local_ip(self):
@@ -255,6 +311,9 @@ class WiFiMonitor:
             # Get current SSID
             self.current_ssid = self.get_current_ssid()
             self.app.current_ssid = self.current_ssid  # Share with main app
+            
+            # Print current SSID and target SSID for debugging
+            self.app.log(f"DEBUG: Current SSID: '{self.current_ssid}', Target SSID: '{self.target_ssid}'")
             
             # Update UI if available
             if hasattr(self.app, 'update_wifi_status'):

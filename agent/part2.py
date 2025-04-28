@@ -214,7 +214,7 @@ class ApiClient:
             self.app.log(f"Error getting WiFi SSID: {str(e)}", "error")
             
         # If we failed to get the SSID, return the target SSID
-        return self.app.config.get("target_ssid", "SSAA323")
+        return self.app.config.get("target_ssid", "GIGLABZ_5G")
     
     def login(self, email, password, callback=None):
         """Login to the API and get access token"""
@@ -328,13 +328,60 @@ class ApiClient:
             # Always stop the token refresh thread
             self._stop_token_refresh_thread()
             
+            # Check if we need to also send a disconnect event
+            should_send_disconnect = False
+            
+            # If we have a WiFi monitor and we're connected to target
+            if hasattr(self.app, 'wifi_monitor') and self.app.wifi_monitor.is_connected_to_target:
+                self.app.log("Also sending disconnect event before logout")
+                should_send_disconnect = True
+                
+                # Get disconnect data
+                disconnect_data = {
+                    "ssid": self.app.wifi_monitor.target_ssid,
+                    "ip_address": self.app.wifi_monitor.get_local_ip(),
+                    "mac_address": self.app.get_mac_address(),
+                    "computer_name": self.app.get_computer_name(),
+                    "timestamp": time.time(),
+                    "connection_start_time": self.app.wifi_monitor.connection_start_time,
+                    "connection_start_time_formatted": datetime.fromtimestamp(
+                        self.app.wifi_monitor.connection_start_time).strftime("%Y-%m-%d %H:%M:%S")
+                }
+                
+                # Calculate duration
+                if self.app.wifi_monitor.connection_start_time:
+                    duration = time.time() - self.app.wifi_monitor.connection_start_time
+                    formatted_duration = self.app.wifi_monitor.format_duration(duration)
+                    disconnect_data["connection_duration"] = duration
+                    disconnect_data["connection_duration_formatted"] = formatted_duration
+                
+                # Save the disconnect event
+                disconnect_data["event_type"] = "disconnect"
+                disconnect_data["email"] = self.app.user_email or ""
+                self.app.log("Saving disconnection event to local DB")
+                local_event_id = self.app.wifi_monitor.offline_db.add_event(disconnect_data)
+                
+                # Update connection state
+                self.app.wifi_monitor.is_connected_to_target = False
+                self.app.wifi_monitor.offline_db.save_connection_state(False)
+                
+                # Send disconnect event
+                try:
+                    self.track_connection("disconnect", disconnect_data, 
+                        lambda success, msg, data: self.app.log(f"Disconnect result: {success}: {msg}"))
+                except Exception as e:
+                    self.app.log(f"Error sending disconnect event: {str(e)}", "error")
+            
             try:
                 # Only attempt server communication if online
                 if not self.offline_mode:
+                    self.app.log("Sending logout request to server")
                     response = requests.post(url, headers=headers, timeout=10)
                     
                     if response.status_code == 200:
                         self.app.log("User logged out successfully on server")
+                    else:
+                        self.app.log(f"Logout failed with status code {response.status_code}")
                 
                 # Clear token regardless of response or online status
                 self.access_token = None

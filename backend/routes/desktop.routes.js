@@ -29,4 +29,10 @@ router.get(
   controller.getActiveSessions
 );
 
+router.get(
+  "/attendance-history",
+  [authJwt.verifyToken, authJwt.isAdmin],
+  controller.getAttendanceHistory
+);
+
 module.exports = router;

@@ -44,7 +44,7 @@ ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
 # Default configuration
 DEFAULT_CONFIG = {
     "api_base_url": "http://localhost:9600",
-    "target_ssid": "Vadakkemadom 5G",
+    "target_ssid": "GIGLABZ_5G",
     "auto_start": True,
     "first_run": True
 }
@@ -304,6 +304,11 @@ This information is used solely for attendance tracking purposes.
         minimize_button = tk.Button(button_frame, text="Minimize to Tray", command=self.minimize_to_tray)
         minimize_button.pack(side=tk.LEFT, padx=5)
         
+        # Force connect button
+        force_connect_button = tk.Button(button_frame, text="Force Connect", 
+                                         command=self.force_connect_to_office)
+        force_connect_button.pack(side=tk.LEFT, padx=5)
+        
         self.center_window(self.root)
         
         # Start mainloop if not already running
@@ -388,6 +393,58 @@ This information is used solely for attendance tracking purposes.
             window.geometry(f"{width}x{height}+{x}+{y}")
         except:
             pass
+            
+    def force_connect_to_office(self):
+        """Force connection to office network regardless of actual SSID"""
+        self.log("Forcing connection to office network")
+        
+        # Access the wifi_monitor through the app
+        if hasattr(self, 'wifi_monitor'):
+            # Set the current SSID to target SSID to force connection
+            target_ssid = self.config.get("target_ssid", "GIGLABZ_5G")
+            self.wifi_monitor.current_ssid = target_ssid
+            self.current_ssid = target_ssid
+            
+            # Manually trigger connection logic
+            if self.wifi_monitor.last_ssid != target_ssid:
+                self.wifi_monitor.last_ssid = target_ssid
+                self.wifi_monitor.is_connected_to_target = True
+                self.wifi_monitor.connection_start_time = time.time()
+                
+                # Update saved state
+                self.wifi_monitor.offline_db.save_connection_state(
+                    True, target_ssid, self.wifi_monitor.connection_start_time
+                )
+                
+                # Update UI
+                self.update_wifi_status(True, target_ssid)
+                
+                # Create and send connect event
+                self.log("Creating forced connection event")
+                connection_data = {
+                    "ssid": target_ssid,
+                    "ip_address": "127.0.0.1",  # Placeholder
+                    "mac_address": self.get_mac_address(),
+                    "computer_name": self.get_computer_name(),
+                    "timestamp": time.time(),
+                    "connection_start_time": time.time(),
+                    "connection_start_time_formatted": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "event_type": "connect",
+                    "email": self.user_email or ""
+                }
+                
+                # Save locally and send to server if possible
+                local_event_id = self.wifi_monitor.offline_db.add_event(connection_data)
+                
+                if hasattr(self, 'api_client'):
+                    def callback(success, message, data=None):
+                        if success:
+                            self.wifi_monitor.offline_db.mark_as_synced(local_event_id)
+                            self.log(f"Forced connection event synced: {local_event_id}")
+                            
+                    self.api_client.track_connection("connect", connection_data, callback)
+                    
+                self.log("Force connection completed")
     
     def get_mac_address(self):
         """Get device MAC address"""

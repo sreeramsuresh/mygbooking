@@ -484,3 +484,78 @@
 2025-04-28T06:44:08.423Z info: User 4 has existing booking on 2025-05-23
 2025-04-28T06:44:08.424Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
 2025-04-28T06:44:08.425Z info: Initial auto-booking process completed successfully
+2025-04-28T09:57:38.003Z info: Checking database structure...
+2025-04-28T10:03:10.366Z info: Checking database structure...
+2025-04-28T10:03:10.913Z error: Database initialization failed: SQLITE_ERROR: near "[1,2,3,4,5]": syntax error
+2025-04-28T10:04:22.493Z info: Checking database structure...
+2025-04-28T10:04:22.656Z info: Database synchronized successfully.
+2025-04-28T10:04:22.661Z info: Seeding roles...
+2025-04-28T10:04:22.671Z info: Roles seeded successfully.
+2025-04-28T10:04:22.673Z info: Creating admin user...
+2025-04-28T10:04:22.734Z info: Admin user created successfully.
+2025-04-28T10:04:22.735Z info: Creating initial seats...
+2025-04-28T10:04:22.748Z info: Initial seats created successfully.
+2025-04-28T10:04:22.750Z info: All users have valid auto-booking preferences
+2025-04-28T10:04:22.751Z info: Database initialization completed successfully.
+2025-04-28T10:04:22.755Z info: Scheduler initialized successfully
+2025-04-28T10:04:22.759Z info: Server is running on port 9600
+2025-04-28T10:04:32.757Z info: Running initial auto-booking process at startup
+2025-04-28T10:04:32.759Z info: Starting auto-booking process for all users
+2025-04-28T10:04:32.763Z info: Found 1 admin users to exclude from auto-booking
+2025-04-28T10:04:32.766Z info: Found 0 active users to process
+2025-04-28T10:04:32.766Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-04-28T10:04:32.767Z info: Initial auto-booking process completed successfully
+2025-04-28T10:38:59.922Z info: Checking database structure...
+2025-04-28T10:38:59.985Z info: Database synchronized successfully.
+2025-04-28T10:38:59.990Z info: Seeding roles...
+2025-04-28T10:39:00.002Z info: Roles seeded successfully.
+2025-04-28T10:39:00.003Z info: Creating admin user...
+2025-04-28T10:39:00.071Z info: Admin user created successfully.
+2025-04-28T10:39:00.072Z info: Creating initial seats...
+2025-04-28T10:39:00.081Z info: Initial seats created successfully.
+2025-04-28T10:39:00.085Z info: All users have valid auto-booking preferences
+2025-04-28T10:39:00.086Z info: Database initialization completed successfully.
+2025-04-28T10:43:18.278Z info: Checking database structure...
+2025-04-28T10:43:18.467Z info: Database synchronized successfully.
+2025-04-28T10:43:18.492Z info: Seeding roles...
+2025-04-28T10:43:18.551Z info: Roles seeded successfully.
+2025-04-28T10:43:18.556Z info: Creating admin user...
+2025-04-28T10:43:18.784Z info: Admin user created successfully.
+2025-04-28T10:43:18.797Z info: Creating initial seats...
+2025-04-28T10:43:18.844Z info: Initial seats created successfully.
+2025-04-28T10:44:06.465Z info: Checking database structure...
+2025-04-28T10:44:06.613Z info: Database synchronized successfully.
+2025-04-28T10:44:06.618Z info: Seeding roles...
+2025-04-28T10:44:06.636Z info: Roles seeded successfully.
+2025-04-28T10:44:06.637Z info: Creating admin user...
+2025-04-28T10:44:06.688Z info: Admin user created successfully.
+2025-04-28T10:44:06.690Z info: Creating initial seats...
+2025-04-28T10:44:06.700Z info: Initial seats created successfully.
+2025-04-28T10:44:06.702Z info: All users have valid auto-booking preferences
+2025-04-28T10:44:06.703Z info: Database initialization completed successfully.
+2025-04-28T10:44:06.707Z info: Scheduler initialized successfully
+2025-04-28T10:44:06.709Z info: Server is running on port 9600
+2025-04-28T10:44:16.708Z info: Running initial auto-booking process at startup
+2025-04-28T10:44:16.710Z info: Starting auto-booking process for all users
+2025-04-28T10:44:16.714Z info: Found 1 admin users to exclude from auto-booking
+2025-04-28T10:44:16.718Z info: Found 0 active users to process
+2025-04-28T10:44:16.718Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-04-28T10:44:16.719Z info: Initial auto-booking process completed successfully
+2025-04-28T11:01:19.325Z info: Checking database structure...
+2025-04-28T11:01:19.561Z info: Database synchronized successfully.
+2025-04-28T11:01:19.571Z info: Seeding roles...
+2025-04-28T11:01:19.590Z info: Roles seeded successfully.
+2025-04-28T11:01:19.594Z info: Creating admin user...
+2025-04-28T11:01:19.658Z info: Admin user created successfully.
+2025-04-28T11:01:19.662Z info: Creating initial seats...
+2025-04-28T11:01:19.672Z info: Initial seats created successfully.
+2025-04-28T11:01:19.674Z info: All users have valid auto-booking preferences
+2025-04-28T11:01:19.675Z info: Database initialization completed successfully.
+2025-04-28T11:01:19.678Z info: Scheduler initialized successfully
+2025-04-28T11:01:19.680Z info: Server is running on port 9600
+2025-04-28T11:01:29.680Z info: Running initial auto-booking process at startup
+2025-04-28T11:01:29.682Z info: Starting auto-booking process for all users
+2025-04-28T11:01:29.685Z info: Found 1 admin users to exclude from auto-booking
+2025-04-28T11:01:29.688Z info: Found 0 active users to process
+2025-04-28T11:01:29.688Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-04-28T11:01:29.688Z info: Initial auto-booking process completed successfully
