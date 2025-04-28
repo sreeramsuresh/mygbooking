@@ -12,6 +12,7 @@ import keyring
 import threading
 import uuid
 import time
+import queue
 
 # Handle platform-specific imports
 if platform.system() == "Windows":
@@ -44,7 +45,7 @@ ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
 # Default configuration
 DEFAULT_CONFIG = {
     "api_base_url": "http://localhost:9600",
-    "target_ssid": "GIGLABZ_5G",
+    "target_ssid": "Vadakkemadom 5g",
     "auto_start": True,
     "first_run": True
 }
@@ -58,6 +59,10 @@ class AttendanceApp:
         self.is_logged_in = False
         self.access_token = None
         self.user_email = None
+        self._mainloop_running = False  # Track if mainloop is running
+        
+        # Create a queue for thread-safe UI updates
+        self.ui_queue = queue.Queue()
         
         # Ensure config directory exists
         if not os.path.exists(CONFIG_DIR):
@@ -74,6 +79,39 @@ class AttendanceApp:
             self.show_license_agreement()
         else:
             self.minimize_to_tray()
+            
+    def process_ui_queue(self):
+        """Process any pending UI updates from the queue"""
+        try:
+            while True:
+                # Get a task from the queue without blocking
+                task, args, kwargs = self.ui_queue.get_nowait()
+                try:
+                    # Execute the task
+                    task(*args, **kwargs)
+                except Exception as e:
+                    self.log(f"Error in UI task: {str(e)}", "error")
+                # Mark the task as done
+                self.ui_queue.task_done()
+        except queue.Empty:
+            # Queue is empty, schedule to check again
+            if self.root and hasattr(self.root, 'winfo_exists'):
+                try:
+                    if self.root.winfo_exists():
+                        self.root.after(100, self.process_ui_queue)
+                except tk.TclError:
+                    pass
+    
+    def schedule_ui_task(self, task, *args, **kwargs):
+        """Schedule a task to be executed on the main thread"""
+        self.ui_queue.put((task, args, kwargs))
+        # If root exists, start processing the queue
+        if self.root and hasattr(self.root, 'winfo_exists'):
+            try:
+                if self.root.winfo_exists():
+                    self.root.after(0, self.process_ui_queue)
+            except tk.TclError:
+                pass
 
     def load_config(self):
         """Load configuration from file or create default if not exists"""
@@ -104,12 +142,28 @@ class AttendanceApp:
 
     def log(self, message, level="info"):
         """Log a message with specified level"""
-        if level == "info":
-            self.logger.info(message)
-        elif level == "error":
-            self.logger.error(message)
-        elif level == "warning":
-            self.logger.warning(message)
+        try:
+            # Create a formatted message with thread information
+            thread_id = threading.get_ident()
+            thread_name = threading.current_thread().name
+            formatted_msg = f"[Thread {thread_id} - {thread_name}] {message}"
+            
+            # Log to the appropriate level
+            if level == "info":
+                self.logger.info(formatted_msg)
+            elif level == "error":
+                self.logger.error(formatted_msg)
+            elif level == "warning":
+                self.logger.warning(formatted_msg)
+                
+            # For critical errors, also print to console
+            if level == "error":
+                print(f"ERROR: {message}")
+                
+        except Exception as e:
+            # If logging fails, try printing to console
+            print(f"Logging error: {str(e)}")
+            print(f"Original message ({level}): {message}")
 
     def setup_tray(self):
         """Set up system tray icon and menu"""
@@ -217,104 +271,189 @@ This information is used solely for attendance tracking purposes.
 
     def show_login(self, icon=None):
         """Display login window"""
-        if self.root and hasattr(self.root, 'winfo_exists') and self.root.winfo_exists():
-            self.root.deiconify()
-            return
+        self.log("Attempting to show login window")
+        
+        # Check if we already have a valid root window
+        if self.root and hasattr(self.root, 'winfo_exists'):
+            try:
+                if self.root.winfo_exists():
+                    self.log("Existing root window found, showing it")
+                    # Clear any existing widgets
+                    for widget in self.root.winfo_children():
+                        widget.destroy()
+                else:
+                    self.log("Root window exists but is invalid, creating new one")
+                    self.root = None
+            except tk.TclError as e:
+                self.log(f"Tkinter error with existing root: {str(e)}", "error")
+                # Root is invalid, we'll create a new one
+                self.root = None
+        
+        # Create a new login window if needed
+        if not self.root:
+            try:
+                self.log("Creating new login window")
+                self.root = tk.Tk()
+                # Set window properties
+                self.root.title(f"{APP_NAME} - Login")
+                self.root.geometry("350x250")
+                self.root.resizable(False, False)
+                self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+            except Exception as e:
+                self.log(f"Error creating login window: {str(e)}", "error")
+                print(f"Error creating login window: {str(e)}")
+                return
+        
+        try:
+            # Create main frame
+            frame = tk.Frame(self.root, padx=20, pady=20)
+            frame.pack(fill="both", expand=True)
             
-        # Create a new login window
-        self.root = tk.Tk()
-        self.root.title(f"{APP_NAME} - Login")
-        self.root.geometry("350x250")
-        self.root.resizable(False, False)
-        self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
-        
-        frame = tk.Frame(self.root, padx=20, pady=20)
-        frame.pack(fill="both", expand=True)
-        
-        # Username/Email field
-        tk.Label(frame, text="Email:").grid(row=0, column=0, sticky="w", pady=(0, 5))
-        self.email_var = tk.StringVar()
-        email_entry = tk.Entry(frame, textvariable=self.email_var, width=30)
-        email_entry.grid(row=0, column=1, pady=(0, 5))
-        
-        # Password field
-        tk.Label(frame, text="Password:").grid(row=1, column=0, sticky="w", pady=(0, 5))
-        self.password_var = tk.StringVar()
-        password_entry = tk.Entry(frame, textvariable=self.password_var, show="*", width=30)
-        password_entry.grid(row=1, column=1, pady=(0, 5))
-        
-        # Login button
-        login_button = tk.Button(frame, text="Login", command=self.handle_login)
-        login_button.grid(row=2, column=0, columnspan=2, pady=15)
-        
-        # Status label
-        self.status_var = tk.StringVar()
-        status_label = tk.Label(frame, textvariable=self.status_var, fg="red")
-        status_label.grid(row=3, column=0, columnspan=2)
-        
-        self.center_window(self.root)
-        
-        # Pre-fill email if available
-        if self.user_email:
-            self.email_var.set(self.user_email)
-            password_entry.focus()
-        else:
-            email_entry.focus()
-        
-        self.root.mainloop()
+            # Username/Email field
+            tk.Label(frame, text="Email:").grid(row=0, column=0, sticky="w", pady=(0, 5))
+            self.email_var = tk.StringVar()
+            email_entry = tk.Entry(frame, textvariable=self.email_var, width=30)
+            email_entry.grid(row=0, column=1, pady=(0, 5))
+            
+            # Password field
+            tk.Label(frame, text="Password:").grid(row=1, column=0, sticky="w", pady=(0, 5))
+            self.password_var = tk.StringVar()
+            password_entry = tk.Entry(frame, textvariable=self.password_var, show="*", width=30)
+            password_entry.grid(row=1, column=1, pady=(0, 5))
+            
+            # Login button
+            login_button = tk.Button(frame, text="Login", command=self.handle_login)
+            login_button.grid(row=2, column=0, columnspan=2, pady=15)
+            
+            # Status label
+            self.status_var = tk.StringVar()
+            status_label = tk.Label(frame, textvariable=self.status_var, fg="red")
+            status_label.grid(row=3, column=0, columnspan=2)
+            
+            # Center the window
+            self.center_window(self.root)
+            
+            # Pre-fill email if available
+            if self.user_email:
+                self.log(f"Pre-filling email: {self.user_email}")
+                self.email_var.set(self.user_email)
+                password_entry.focus()
+            else:
+                email_entry.focus()
+            
+            # Make sure the window is visible
+            self.root.deiconify()
+            self.root.lift()  # Bring window to front
+            
+            # Start processing the UI queue
+            self.root.after(100, self.process_ui_queue)
+            
+            # Run the main loop if needed
+            if not self._mainloop_running:
+                self.log("Starting mainloop for login window")
+                self._mainloop_running = True
+                self.root.mainloop()
+            else:
+                self.log("Mainloop already running, not starting new one")
+                
+            self.log("Login window setup complete")
+                
+        except Exception as e:
+            self.log(f"Error setting up login UI: {str(e)}", "error")
+            print(f"Error setting up login UI: {str(e)}")
     
     def show_main_window(self):
         """Display main application window after successful login"""
+        self.log("Attempting to show main window")
+        
         # Check if root exists and is valid
-        if self.root and hasattr(self.root, 'winfo_exists') and self.root.winfo_exists():
-            for widget in self.root.winfo_children():
-                widget.destroy()
+        is_root_valid = False
+        if self.root and hasattr(self.root, 'winfo_exists'):
+            try:
+                if self.root.winfo_exists():
+                    is_root_valid = True
+                    self.log("Root window exists, clearing existing widgets")
+                    for widget in self.root.winfo_children():
+                        widget.destroy()
+                else:
+                    self.log("Root window reference exists but window is invalid")
+                    is_root_valid = False
+            except tk.TclError as e:
+                self.log(f"Tcl error checking root window: {str(e)}", "error")
+                is_root_valid = False
         else:
-            self.root = tk.Tk()
-            self.root.title(f"{APP_NAME} - Connected")
-            self.root.geometry("400x300")
-            self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+            self.log("No valid root window, creating new one")
         
-        frame = tk.Frame(self.root, padx=20, pady=20)
-        frame.pack(fill="both", expand=True)
+        if not is_root_valid:
+            try:
+                self.log("Creating new main window")
+                self.root = tk.Tk()
+                self.root.title(f"{APP_NAME} - Connected")
+                self.root.geometry("400x300")
+                self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+            except Exception as e:
+                self.log(f"Error creating main window: {str(e)}", "error")
+                return
         
-        # Welcome message
-        welcome_label = tk.Label(frame, text=f"Welcome, {self.user_email}", font=("Arial", 14))
-        welcome_label.pack(pady=(0, 20))
-        
-        # Status information
-        status_frame = tk.LabelFrame(frame, text="Connection Status", padx=10, pady=10)
-        status_frame.pack(fill="x", pady=10)
-        
-        self.wifi_status_var = tk.StringVar(value="Monitoring WiFi...")
-        wifi_status = tk.Label(status_frame, textvariable=self.wifi_status_var)
-        wifi_status.pack(anchor="w")
-        
-        self.connection_status_var = tk.StringVar(value="Not connected to target network")
-        connection_status = tk.Label(status_frame, textvariable=self.connection_status_var)
-        connection_status.pack(anchor="w")
-        
-        # Buttons
-        button_frame = tk.Frame(frame)
-        button_frame.pack(pady=20)
-        
-        disconnect_button = tk.Button(button_frame, text="Disconnect", command=self.handle_logout)
-        disconnect_button.pack(side=tk.LEFT, padx=5)
-        
-        minimize_button = tk.Button(button_frame, text="Minimize to Tray", command=self.minimize_to_tray)
-        minimize_button.pack(side=tk.LEFT, padx=5)
-        
-        # Force connect button
-        force_connect_button = tk.Button(button_frame, text="Force Connect", 
-                                         command=self.force_connect_to_office)
-        force_connect_button.pack(side=tk.LEFT, padx=5)
-        
-        self.center_window(self.root)
-        
-        # Start mainloop if not already running
-        if not hasattr(self, '_mainloop_running') or not self._mainloop_running:
-            self._mainloop_running = True
-            self.root.mainloop()
+        try:
+            self.log("Setting up main window UI components")
+            
+            frame = tk.Frame(self.root, padx=20, pady=20)
+            frame.pack(fill="both", expand=True)
+            
+            # Welcome message
+            welcome_label = tk.Label(frame, text=f"Welcome, {self.user_email}", font=("Arial", 14))
+            welcome_label.pack(pady=(0, 20))
+            
+            # Status information
+            status_frame = tk.LabelFrame(frame, text="Connection Status", padx=10, pady=10)
+            status_frame.pack(fill="x", pady=10)
+            
+            self.wifi_status_var = tk.StringVar(value="Monitoring WiFi...")
+            wifi_status = tk.Label(status_frame, textvariable=self.wifi_status_var)
+            wifi_status.pack(anchor="w")
+            
+            self.connection_status_var = tk.StringVar(value="Not connected to target network")
+            connection_status = tk.Label(status_frame, textvariable=self.connection_status_var)
+            connection_status.pack(anchor="w")
+            
+            # Buttons
+            button_frame = tk.Frame(frame)
+            button_frame.pack(pady=20)
+            
+            disconnect_button = tk.Button(button_frame, text="Disconnect", command=self.handle_logout)
+            disconnect_button.pack(side=tk.LEFT, padx=5)
+            
+            minimize_button = tk.Button(button_frame, text="Minimize to Tray", command=self.minimize_to_tray)
+            minimize_button.pack(side=tk.LEFT, padx=5)
+            
+            # Force connect button
+            force_connect_button = tk.Button(button_frame, text="Force Connect", 
+                                             command=self.force_connect_to_office)
+            force_connect_button.pack(side=tk.LEFT, padx=5)
+            
+            self.center_window(self.root)
+            
+            # Make sure the window is visible
+            self.root.deiconify()
+            self.root.lift()  # Bring window to front
+            
+            # Start processing the UI queue
+            self.root.after(100, self.process_ui_queue)
+            
+            # Start mainloop if not already running
+            if not self._mainloop_running:
+                self.log("Starting mainloop for main window")
+                self._mainloop_running = True
+                self.root.mainloop()
+            else:
+                self.log("Mainloop already running, not starting new one")
+                
+            self.log("Main window setup complete")
+            
+        except Exception as e:
+            self.log(f"Error setting up main window: {str(e)}", "error")
+            print(f"Error setting up main window: {str(e)}")
     
     def handle_login(self):
         """Handle login button click - will be implemented in Part 2"""
@@ -346,15 +485,23 @@ This information is used solely for attendance tracking purposes.
         if not hasattr(self, 'wifi_status_var') or not hasattr(self, 'connection_status_var'):
             return
             
-        if connected and ssid:
-            self.wifi_status_var.set(f"Connected to: {ssid}")
-            if ssid == self.config["target_ssid"]:
-                self.connection_status_var.set("✓ Connected to office network")
-            else:
-                self.connection_status_var.set("✗ Not connected to office network")
-        else:
-            self.wifi_status_var.set("Not connected to WiFi")
-            self.connection_status_var.set("✗ Not connected to office network")
+        # Define the actual update function to run on the main thread
+        def _update_wifi_status():
+            try:
+                if connected and ssid:
+                    self.wifi_status_var.set(f"Connected to: {ssid}")
+                    if ssid == self.config["target_ssid"]:
+                        self.connection_status_var.set("✓ Connected to office network")
+                    else:
+                        self.connection_status_var.set("✗ Not connected to office network")
+                else:
+                    self.wifi_status_var.set("Not connected to WiFi")
+                    self.connection_status_var.set("✗ Not connected to office network")
+            except Exception as e:
+                self.log(f"Error updating WiFi status: {str(e)}", "error")
+        
+        # Schedule this to run on the main thread
+        self.schedule_ui_task(_update_wifi_status)
     
     def exit_app(self, icon=None):
         """Clean exit of the application"""
@@ -401,7 +548,7 @@ This information is used solely for attendance tracking purposes.
         # Access the wifi_monitor through the app
         if hasattr(self, 'wifi_monitor'):
             # Set the current SSID to target SSID to force connection
-            target_ssid = self.config.get("target_ssid", "GIGLABZ_5G")
+            target_ssid = self.config.get("target_ssid", "Vadakkemadom 5g")
             self.wifi_monitor.current_ssid = target_ssid
             self.current_ssid = target_ssid
             

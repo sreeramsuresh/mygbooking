@@ -120,6 +120,8 @@ class ApiClient:
     
     def _refresh_token_now(self):
         """Refresh the access token using refresh token"""
+        self.app.log("Attempting to refresh token")
+        
         if not self.refresh_token:
             self.app.log("No refresh token available", "warning")
             return False
@@ -128,36 +130,65 @@ class ApiClient:
         payload = {"refresh_token": self.refresh_token}
         
         try:
+            self.app.log(f"Sending refresh token request to {url}")
             response = requests.post(url, json=payload, timeout=10)
+            self.app.log(f"Received refresh token response: status={response.status_code}")
             
             if response.status_code == 200:
-                data = response.json()
-                if data.get("success"):
-                    # Extract and store new tokens
-                    token_data = data.get("data", {})
-                    new_token = token_data.get("accessToken")
-                    new_refresh_token = token_data.get("refreshToken")
-                    expiry = time.time() + token_data.get("expiresIn", 3600)
+                try:
+                    data = response.json()
+                    self.app.log(f"Refresh token response success: {data.get('success', False)}")
                     
-                    if new_token:
-                        self.access_token = new_token
-                        if new_refresh_token:
-                            self.refresh_token = new_refresh_token
-                        self.token_expiry = expiry
+                    if data.get("success"):
+                        # Extract and store new tokens
+                        token_data = data.get("data", {})
+                        new_token = token_data.get("accessToken")
+                        new_refresh_token = token_data.get("refreshToken")
+                        expires_in = token_data.get("expiresIn", 3600)
+                        expiry = time.time() + expires_in
                         
-                        # Save updated tokens
-                        self._save_token(new_token, new_refresh_token, expiry)
-                        
-                        self.app.log("Token refreshed successfully")
-                        return True
+                        if new_token:
+                            self.app.log(f"Got new access token, expires in {expires_in} seconds")
+                            self.access_token = new_token
+                            if new_refresh_token:
+                                self.refresh_token = new_refresh_token
+                                self.app.log("Got new refresh token")
+                            self.token_expiry = expiry
+                            
+                            # Reset offline mode since we can reach the server
+                            self.offline_mode = False
+                            
+                            # Save updated tokens
+                            self._save_token(new_token, new_refresh_token, expiry)
+                            
+                            self.app.log("Token refreshed successfully")
+                            return True
+                        else:
+                            self.app.log("Response missing access token", "warning")
+                except Exception as json_err:
+                    self.app.log(f"Error parsing refresh token response: {str(json_err)}", "error")
             
-            self.app.log(f"Failed to refresh token: {response.status_code}", "warning")
+            # Handle specific error cases
+            if response.status_code == 401:
+                self.app.log("Token refresh failed: Invalid refresh token", "warning")
+                # Token is invalid, clear saved token
+                self.access_token = None
+                self.refresh_token = None
+                self.token_expiry = None
+                self._clear_token()
+                self.app.is_logged_in = False
+            else:
+                self.app.log(f"Failed to refresh token: status={response.status_code}, reason={response.reason}", "warning")
+            
             return False
             
         except requests.RequestException as e:
-            self.app.log(f"Token refresh error: {str(e)}", "error")
+            self.app.log(f"Token refresh network error: {str(e)}", "error")
             # Enter offline mode if we can't reach the server
             self.offline_mode = True
+            return False
+        except Exception as e:
+            self.app.log(f"Unexpected error during token refresh: {str(e)}", "error")
             return False
     
     def check_online_status(self):
@@ -214,7 +245,7 @@ class ApiClient:
             self.app.log(f"Error getting WiFi SSID: {str(e)}", "error")
             
         # If we failed to get the SSID, return the target SSID
-        return self.app.config.get("target_ssid", "GIGLABZ_5G")
+        return self.app.config.get("target_ssid", "Vadakkemadom 5g")
     
     def login(self, email, password, callback=None):
         """Login to the API and get access token"""
@@ -224,7 +255,7 @@ class ApiClient:
         mac_address = self.get_mac_address()
         current_ssid = self.get_current_ssid()
         
-        self.app.log(f"Login attempt with MAC: {mac_address}, SSID: {current_ssid}")
+        self.app.log(f"Login attempt for {email} with MAC: {mac_address}, SSID: {current_ssid}")
         
         payload = {
             "email": email,
@@ -234,57 +265,88 @@ class ApiClient:
         }
         
         def _do_login():
+            self.app.log("Starting login process in background thread")
             # First check if we're online
             if not self.check_online_status():
+                self.app.log("Login failed: Cannot connect to server", "error")
                 if callback:
                     callback(False, "Cannot connect to server. Check your internet connection.")
                 return
                 
             try:
-                self.app.log(f"Sending login request with payload: {json.dumps(payload)}")
+                # Log request details (without password)
+                safe_payload = dict(payload)
+                safe_payload["password"] = "*****"  # Mask password in logs
+                self.app.log(f"Sending login request to {url} with payload: {json.dumps(safe_payload)}")
+                
+                # Perform the API request
                 response = requests.post(url, json=payload, timeout=10)
+                self.app.log(f"Received login response: status={response.status_code}")
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get("success"):
-                        # Extract and store token
-                        user_data = data.get("data", {})
-                        token = user_data.get("accessToken")
-                        refresh_token = user_data.get("refreshToken")
-                        expires_in = user_data.get("expiresIn", 3600)
+                try:
+                    # Try to parse the response as JSON
+                    response_data = response.json()
+                    self.app.log(f"Response data: success={response_data.get('success', False)}")
+                except Exception as e:
+                    self.app.log(f"Error parsing response as JSON: {str(e)}", "error")
+                    response_data = {"success": False, "message": "Invalid server response"}
+                
+                # Handle success case (200 + success flag)
+                if response.status_code == 200 and response_data.get("success"):
+                    # Extract and store token
+                    user_data = response_data.get("data", {})
+                    token = user_data.get("accessToken")
+                    refresh_token = user_data.get("refreshToken")
+                    expires_in = user_data.get("expiresIn", 3600)
+                    
+                    if token:
+                        self.app.log(f"Got valid login token for user {email}")
+                        self.access_token = token
+                        self.refresh_token = refresh_token
+                        self.token_expiry = time.time() + expires_in
+                        self.user_data = user_data
+                        self.app.user_email = email
+                        self.app.is_logged_in = True
                         
-                        if token:
-                            self.access_token = token
-                            self.refresh_token = refresh_token
-                            self.token_expiry = time.time() + expires_in
-                            self.user_data = user_data
-                            self.app.user_email = email
-                            self.app.is_logged_in = True
-                            
-                            # Save token securely
-                            self._save_token(token, refresh_token, self.token_expiry, user_data, email)
-                            
-                            # Start token refresh thread
-                            self._start_token_refresh_thread()
-                            
-                            self.app.log(f"User {email} logged in successfully")
-                            
-                            if callback:
-                                callback(True, "Login successful")
-                            return
+                        # Save token securely
+                        self._save_token(token, refresh_token, self.token_expiry, user_data, email)
+                        
+                        # Start token refresh thread
+                        self._start_token_refresh_thread()
+                        
+                        self.app.log(f"User {email} logged in successfully, calling callback")
+                        self.offline_mode = False
+                        
+                        if callback:
+                            callback(True, "Login successful")
+                        return
+                    else:
+                        self.app.log("Login response missing token", "error")
+                        if callback:
+                            callback(False, "Invalid server response: missing token")
+                        return
                 
-                # Handle specific error cases
+                # Handle 200 response with failure (API error)
+                if response.status_code == 200 and not response_data.get("success"):
+                    error_msg = response_data.get("message", "Login failed: reason unknown")
+                    self.app.log(f"Login failed: {error_msg}", "error")
+                    
+                    if callback:
+                        callback(False, error_msg)
+                    return
+                
+                # Handle specific HTTP error cases
                 if response.status_code == 400:
-                    data = response.json()
+                    data = response_data
                     message = data.get("message", "Login failed")
                     
                     # Check if user is already registered with another device
-                    if "already registered" in message.lower():
+                    if message and "already registered" in message.lower():
                         error_msg = "User already registered with another device"
                     else:
                         error_msg = message
                         
-                    self.app.log(f"Login failed: {error_msg}", "error")
+                    self.app.log(f"Login failed (400): {error_msg}", "error")
                     
                     if callback:
                         callback(False, error_msg)
@@ -292,14 +354,14 @@ class ApiClient:
                         
                 elif response.status_code == 401:
                     error_msg = "Invalid email or password"
-                    self.app.log(f"Login failed: {error_msg}", "error")
+                    self.app.log(f"Login failed (401): {error_msg}", "error")
                     
                     if callback:
                         callback(False, error_msg)
                     return
                 
-                # General error
-                self.app.log(f"Login failed with status code {response.status_code}", "error")
+                # General HTTP error
+                self.app.log(f"Login failed with status code {response.status_code}: {response.reason}", "error")
                 
                 if callback:
                     callback(False, f"Login failed: {response.reason}")
@@ -309,10 +371,17 @@ class ApiClient:
                 self.offline_mode = True
                 
                 if callback:
-                    callback(False, "Connection error. Please check your internet connection.")
+                    callback(False, f"Connection error: {str(e)}")
+            except Exception as e:
+                self.app.log(f"Unexpected error during login: {str(e)}", "error")
+                
+                if callback:
+                    callback(False, f"Unexpected error: {str(e)}")
         
         # Run the login request in a separate thread
-        threading.Thread(target=_do_login).start()
+        login_thread = threading.Thread(target=_do_login, daemon=True)
+        login_thread.start()
+        self.app.log(f"Started login thread for {email}")
     
     def logout(self, callback=None):
         """Logout from the API"""
@@ -367,8 +436,11 @@ class ApiClient:
                 
                 # Send disconnect event
                 try:
-                    self.track_connection("disconnect", disconnect_data, 
-                        lambda success, msg, data: self.app.log(f"Disconnect result: {success}: {msg}"))
+                    # Create a proper callback function with a default argument for data
+                    def disconnect_callback(success, msg, data=None):
+                        self.app.log(f"Disconnect result: {success}: {msg}")
+                    
+                    self.track_connection("disconnect", disconnect_data, disconnect_callback)
                 except Exception as e:
                     self.app.log(f"Error sending disconnect event: {str(e)}", "error")
             
@@ -519,23 +591,84 @@ def extend_app_authentication(app):
     original_handle_login = app.handle_login
     
     def handle_login_extended():
-        email = app.email_var.get()
-        password = app.password_var.get()
-        
-        if not email or not password:
-            app.status_var.set("Please enter both email and password")
-            return
+        # Get credentials directly - this is already running on the UI thread
+        # when the login button is clicked
+        try:
+            email = app.email_var.get()
+            password = app.password_var.get()
             
-        app.status_var.set("Logging in...")
-        
-        def login_callback(success, message):
-            if success:
-                app.status_var.set("Login successful")
-                app.show_main_window()
-            else:
-                app.status_var.set(message)
-        
-        app.api_client.login(email, password, login_callback)
+            if not email or not password:
+                app.status_var.set("Please enter both email and password")
+                return
+                
+            # Update status
+            app.status_var.set("Logging in...")
+            app.log(f"Login attempt for user: {email}")
+            
+            # Define a simpler callback function
+            def login_callback(success, message):
+                app.log(f"Login callback: success={success}, message={message}")
+                
+                if success:
+                    # We need to make sure we update UI on the main thread
+                    def update_ui_after_login():
+                        try:
+                            # First set status
+                            app.status_var.set("Login successful")
+                            app.log("Showing main window after successful login")
+                            # Then show main window
+                            app.show_main_window()
+                        except Exception as e:
+                            app.log(f"Error updating UI after login: {str(e)}", "error")
+                            print(f"UI update error: {str(e)}")
+                    
+                    # Use after() to schedule on main thread if possible
+                    if app.root and hasattr(app.root, 'after'):
+                        try:
+                            # Schedule immediate execution
+                            app.root.after(10, update_ui_after_login)
+                            app.log("Scheduled UI update after login")
+                        except Exception as e:
+                            app.log(f"Error scheduling UI update: {str(e)}", "error")
+                            # Try direct approach
+                            update_ui_after_login()
+                    elif hasattr(app, 'schedule_ui_task'):
+                        # Use our queue mechanism
+                        app.schedule_ui_task(update_ui_after_login)
+                        app.log("Queued UI update after login")
+                    else:
+                        # Direct call - potential thread issue
+                        print("Warning: Direct UI update may cause thread issues")
+                        update_ui_after_login()
+                else:
+                    # Error handling - update status
+                    def update_error_status():
+                        try:
+                            app.status_var.set(message)
+                            app.log(f"Login failed: {message}")
+                        except Exception as e:
+                            app.log(f"Error updating status: {str(e)}", "error")
+                            print(f"Login error: {message}")
+                    
+                    # Schedule on main thread
+                    if app.root and hasattr(app.root, 'after'):
+                        app.root.after(10, update_error_status)
+                    elif hasattr(app, 'schedule_ui_task'):
+                        app.schedule_ui_task(update_error_status)
+                    else:
+                        update_error_status()
+            
+            # Start the login process
+            app.log(f"Calling api_client.login for user: {email}")
+            app.api_client.login(email, password, login_callback)
+            
+        except Exception as e:
+            app.log(f"Error in handle_login_extended: {str(e)}", "error")
+            print(f"Login error: {str(e)}")
+            try:
+                app.status_var.set(f"Error: {str(e)}")
+            except:
+                print(f"Could not update status: {str(e)}")
     
     app.handle_login = handle_login_extended
     
@@ -543,32 +676,104 @@ def extend_app_authentication(app):
     original_handle_logout = app.handle_logout
     
     def handle_logout_extended():
-        # Safe access to status_var
+        # Safe access to status_var - use thread-safe method
         if hasattr(app, 'status_var'):
-            app.status_var.set("Logging out...")
+            # Define the UI update function
+            def update_status():
+                try:
+                    app.status_var.set("Logging out...")
+                except Exception as e:
+                    print(f"Error updating status: {str(e)}")
+            
+            # Schedule it to run on main thread
+            if hasattr(app, 'schedule_ui_task'):
+                app.schedule_ui_task(update_status)
+            else:
+                # Fallback if schedule_ui_task is not available
+                try:
+                    app.status_var.set("Logging out...")
+                except Exception:
+                    print("Logging out...")
         else:
             print("Logging out...")
         
         def logout_callback(success, message):
             if success:
-                if hasattr(app, 'status_var'):
-                    app.status_var.set("Logged out")
-                else:
-                    print("Logged out")
-                    
-                # Safely destroy the window if it exists
-                if app.root and hasattr(app.root, 'winfo_exists') and app.root.winfo_exists():
-                    try:
-                        app.root.destroy()
-                    except:
-                        pass
-                app.root = None
+                print("Logged out")
                 
-                # Important: Show the login window immediately
-                app.show_login()
+                # Schedule UI tasks on the main thread
+                if hasattr(app, 'schedule_ui_task'):
+                    # Define a function to safely destroy the window
+                    def safe_destroy_and_show_login():
+                        try:
+                            # First get a reference to the current root
+                            root = app.root
+                            # Set app.root to None to prevent further access
+                            app.root = None
+                            
+                            # Now destroy the window
+                            if root and hasattr(root, 'destroy'):
+                                root.destroy()
+                                
+                            # Schedule showing login window with slight delay to ensure complete cleanup
+                            app.root = None  # Ensure root is None before new window creation
+                            app.show_login()
+                        except Exception as e:
+                            print(f"Error in window transition: {str(e)}")
+                    
+                    # Add delay to ensure all pending UI operations complete
+                    if app.root and hasattr(app.root, 'after'):
+                        try:
+                            # Schedule window transition after 100ms
+                            app.root.after(100, safe_destroy_and_show_login)
+                        except Exception as e:
+                            # Fallback if scheduling fails
+                            print(f"Error scheduling window transition: {str(e)}")
+                            # Try direct approach
+                            try:
+                                app.root = None
+                                app.show_login()
+                            except Exception as e2:
+                                print(f"Error showing login: {str(e2)}")
+                else:
+                    # Fallback to old method if schedule_ui_task isn't available
+                    # First set app.root to None to prevent further access
+                    root = app.root
+                    app.root = None
+                    
+                    # Now attempt to destroy the window
+                    if root and hasattr(root, 'destroy'):
+                        try:
+                            root.destroy()
+                        except Exception as e:
+                            print(f"Error destroying window: {str(e)}")
+                    
+                    # Show login with delay
+                    def delayed_login():
+                        time.sleep(0.5)
+                        try:
+                            app.show_login()
+                        except Exception as e:
+                            print(f"Error showing login: {str(e)}")
+                    
+                    threading.Thread(target=delayed_login, daemon=True).start()
             else:
-                if hasattr(app, 'status_var'):
-                    app.status_var.set(message)
+                # Handle failure case
+                if hasattr(app, 'status_var') and hasattr(app, 'schedule_ui_task'):
+                    # Thread-safe status update
+                    def update_error_status():
+                        try:
+                            app.status_var.set(message)
+                        except Exception:
+                            print(f"Logout error: {message}")
+                    
+                    app.schedule_ui_task(update_error_status)
+                elif hasattr(app, 'status_var'):
+                    # Direct update as fallback
+                    try:
+                        app.status_var.set(message)
+                    except Exception:
+                        print(f"Logout error: {message}")
                 else:
                     print(f"Logout error: {message}")
         
@@ -602,14 +807,28 @@ def extend_app_authentication(app):
     
     # Add a function to update online/offline status display
     def update_online_status():
-        if hasattr(app, 'online_status_var'):
-            status = "Online" if not app.api_client.offline_mode else "Offline"
-            app.online_status_var.set(f"Status: {status}")
-            
-            # Change color based on status
-            if hasattr(app, 'online_status_label'):
-                color = "green" if not app.api_client.offline_mode else "red"
-                app.online_status_label.config(fg=color)
+        def _update_online_status_ui():
+            try:
+                if hasattr(app, 'online_status_var'):
+                    status = "Online" if not app.api_client.offline_mode else "Offline"
+                    app.online_status_var.set(f"Status: {status}")
+                    
+                    # Change color based on status
+                    if hasattr(app, 'online_status_label'):
+                        color = "green" if not app.api_client.offline_mode else "red"
+                        app.online_status_label.config(fg=color)
+            except Exception as e:
+                app.log(f"Error updating online status UI: {str(e)}", "error")
+        
+        # Use thread-safe update if available
+        if hasattr(app, 'schedule_ui_task'):
+            app.schedule_ui_task(_update_online_status_ui)
+        else:
+            # Direct update as fallback
+            try:
+                _update_online_status_ui()
+            except Exception as e:
+                app.log(f"Error in update_online_status: {str(e)}", "error")
     
     app.update_online_status = update_online_status
     
@@ -617,49 +836,94 @@ def extend_app_authentication(app):
     original_show_main_window = app.show_main_window
     
     def show_main_window_extended():
-        # Check if root exists and is valid
-        if hasattr(app, 'root') and app.root:
+        # This entire function will be executed on the main thread
+        def _main_window_setup():
             try:
-                # Test if the root window is still valid
-                app.root.winfo_exists()
-                # If valid, destroy existing widgets
-                for widget in app.root.winfo_children():
-                    widget.destroy()
-            except (AttributeError, tk.TclError):
-                # If not valid, set to None so a new one will be created
-                app.root = None
-        
-        # Call original function which will create a new window if needed
-        original_show_main_window()
-        
-        # Add online/offline status indicator if it doesn't exist
-        if hasattr(app, 'root') and app.root and not hasattr(app, 'online_status_var'):
-            status_frame = None
-            
-            # Find the status frame if it exists
-            for widget in app.root.winfo_children():
-                if hasattr(widget, 'winfo_children'):
-                    for child in widget.winfo_children():
-                        if hasattr(child, 'cget') and child.cget('text') == "Connection Status":
-                            status_frame = child
-                            break
-            
-            if status_frame:
-                app.online_status_var = tk.StringVar(value="Status: Checking...")
-                app.online_status_label = tk.Label(status_frame, textvariable=app.online_status_var)
-                app.online_status_label.pack(anchor="w")
+                # Check if root exists and is valid
+                if hasattr(app, 'root') and app.root:
+                    try:
+                        # Test if the root window is still valid
+                        exists = app.root.winfo_exists()
+                        # If valid, destroy existing widgets
+                        if exists:
+                            for widget in app.root.winfo_children():
+                                widget.destroy()
+                        else:
+                            # If not valid, set to None so a new one will be created
+                            app.root = None
+                    except (AttributeError, tk.TclError):
+                        # If not valid, set to None so a new one will be created
+                        app.root = None
                 
-                # Update status
-                app.update_online_status()
+                try:
+                    # Call original function which will create a new window if needed
+                    original_show_main_window()
+                except Exception as e:
+                    app.log(f"Error showing main window: {str(e)}", "error")
+                    # Create a fresh window
+                    app.root = None
+                    app.root = tk.Tk()
+                    app.root.title(f"{app.__class__.__name__} - Connected")
+                    app.root.geometry("400x300")
+                    app.root.protocol("WM_DELETE_WINDOW", app.minimize_to_tray)
+                    
+                    frame = tk.Frame(app.root, padx=20, pady=20)
+                    frame.pack(fill="both", expand=True)
+                    
+                    # Welcome message
+                    welcome_label = tk.Label(frame, text=f"Welcome, {app.user_email}", font=("Arial", 14))
+                    welcome_label.pack(pady=(0, 20))
                 
-                # Periodically check online status
-                def check_status_periodically():
-                    while app.running and app.is_logged_in:
-                        app.api_client.check_online_status()
+                # Start processing the UI queue if available
+                if hasattr(app, 'process_ui_queue') and app.root:
+                    app.root.after(100, app.process_ui_queue)
+                
+                # Add online/offline status indicator if it doesn't exist
+                if hasattr(app, 'root') and app.root and not hasattr(app, 'online_status_var'):
+                    status_frame = None
+                    
+                    # Find the status frame if it exists
+                    for widget in app.root.winfo_children():
+                        if hasattr(widget, 'winfo_children'):
+                            for child in widget.winfo_children():
+                                if hasattr(child, 'cget') and child.cget('text') == "Connection Status":
+                                    status_frame = child
+                                    break
+                    
+                    if status_frame:
+                        app.online_status_var = tk.StringVar(value="Status: Checking...")
+                        app.online_status_label = tk.Label(status_frame, textvariable=app.online_status_var)
+                        app.online_status_label.pack(anchor="w")
+                        
+                        # Update status
                         app.update_online_status()
-                        time.sleep(30)  # Check every 30 seconds
-                
-                threading.Thread(target=check_status_periodically, daemon=True).start()
+                        
+                        # Periodically check online status
+                        def check_status_periodically():
+                            while getattr(app, 'running', True) and getattr(app, 'is_logged_in', False):
+                                try:
+                                    app.api_client.check_online_status()
+                                    
+                                    # Use thread-safe update if available
+                                    if hasattr(app, 'schedule_ui_task'):
+                                        app.schedule_ui_task(app.update_online_status)
+                                    else:
+                                        app.update_online_status()
+                                except Exception as e:
+                                    app.log(f"Error checking online status: {str(e)}", "error")
+                                
+                                time.sleep(30)  # Check every 30 seconds
+                        
+                        threading.Thread(target=check_status_periodically, daemon=True).start()
+            except Exception as e:
+                app.log(f"Error in main window setup: {str(e)}", "error")
+        
+        # If we have thread-safe UI updates, use them
+        if hasattr(app, 'schedule_ui_task'):
+            app.schedule_ui_task(_main_window_setup)
+        else:
+            # Otherwise run directly
+            _main_window_setup()
     
     app.show_main_window = show_main_window_extended
     
@@ -682,21 +946,60 @@ def extend_app_authentication(app):
     original_minimize_to_tray = app.minimize_to_tray
     
     def minimize_to_tray_extended():
-        # Safely check if root exists and withdraw it
-        if app.root and hasattr(app.root, 'winfo_exists') and app.root.winfo_exists():
+        # Define the UI operation to run on the main thread
+        def _minimize_window():
             try:
-                app.root.withdraw()
+                # Safely check if root exists and withdraw it
+                if app.root and hasattr(app.root, 'winfo_exists') and app.root.winfo_exists():
+                    try:
+                        app.root.withdraw()
+                    except Exception as e:
+                        app.log(f"Error withdrawing window: {str(e)}", "error")
+                        
+                # Auto show login window if not logged in
+                if not app.is_logged_in and app.tray_icon:
+                    # Schedule login with slight delay to ensure clean minimize
+                    if app.root and hasattr(app.root, 'after'):
+                        try:
+                            def show_login_safe():
+                                try:
+                                    app.show_login()
+                                except Exception as e:
+                                    app.log(f"Error showing login from minimize: {str(e)}", "error")
+                                    
+                            # Schedule login after 500ms
+                            app.root.after(500, show_login_safe)
+                        except Exception as e:
+                            # Fallback if scheduling fails
+                            app.log(f"Error scheduling login from minimize: {str(e)}", "error")
+                            # Use traditional thread approach
+                            def delayed_login():
+                                time.sleep(0.5)
+                                try:
+                                    app.show_login()
+                                except Exception as e2:
+                                    app.log(f"Error in delayed login: {str(e2)}", "error")
+                                
+                            threading.Thread(target=delayed_login, daemon=True).start()
+                    else:
+                        # Use traditional thread approach if after() not available
+                        def delayed_login():
+                            time.sleep(0.5)
+                            try:
+                                app.show_login()
+                            except Exception as e:
+                                app.log(f"Error in delayed login: {str(e)}", "error")
+                            
+                        threading.Thread(target=delayed_login, daemon=True).start()
             except Exception as e:
-                app.log(f"Error withdrawing window: {str(e)}", "error")
+                app.log(f"Error in minimize_to_tray: {str(e)}", "error")
         
-        # Auto show login window if not logged in
-        if not app.is_logged_in and app.tray_icon:
-            # Use a short delay to allow tray icon to appear first
-            def delayed_login():
-                time.sleep(0.5)
-                app.show_login()
-            
-            threading.Thread(target=delayed_login).start()
+        # Use thread-safe method if available
+        if hasattr(app, 'schedule_ui_task'):
+            app.schedule_ui_task(_minimize_window)
+        else:
+            # Fallback to direct call
+            _minimize_window()
     
     app.minimize_to_tray = minimize_to_tray_extended
     

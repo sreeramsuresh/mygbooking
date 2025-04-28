@@ -190,10 +190,19 @@ const useBookings = () => {
     }
   }, [fetchMyBookings]);
   
-  const changeWorkDay = useCallback(async (bookingId, newDate) => {
+  const changeWorkDay = useCallback(async (bookingId, newDate, seatId = null) => {
     try {
-      console.log(`Changing workday for booking ${bookingId} to ${newDate}`);
-      const response = await bookingService.changeWorkDay(bookingId, newDate);
+      // Validate that when changing workday, we always have a seatId
+      if (!seatId) {
+        console.error('A seat must be selected when changing workday');
+        return {
+          success: false,
+          message: 'Please select a seat for the new date'
+        };
+      }
+      
+      console.log(`Changing workday for booking ${bookingId} to ${newDate} with seat ${seatId}`);
+      const response = await bookingService.changeWorkDay(bookingId, newDate, seatId);
       
       if (response.success) {
         // Refresh bookings after change

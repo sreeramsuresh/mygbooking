@@ -185,18 +185,25 @@ def main():
             # Wait a moment to ensure UI is ready
             time.sleep(0.2)
             
-            # Safely show main window only if root doesn't exist or hasn't been destroyed
-            if not hasattr(app, 'root') or app.root is None:
-                app.show_main_window()
+            # Use the thread-safe approach to show main window if available
+            if hasattr(app, 'schedule_ui_task'):
+                create_log_entry("Using thread-safe UI update to show main window")
+                app.schedule_ui_task(app.show_main_window)
             else:
-                try:
-                    # Test if the root window is still valid
-                    app.root.winfo_exists()
+                # Safely show main window only if root doesn't exist or hasn't been destroyed
+                create_log_entry("Using direct method to show main window")
+                if not hasattr(app, 'root') or app.root is None:
                     app.show_main_window()
-                except (AttributeError, tk.TclError):
-                    # If there's an error, create a new main window
-                    app.root = None
-                    app.show_main_window()
+                else:
+                    try:
+                        # Test if the root window is still valid
+                        app.root.winfo_exists()
+                        app.show_main_window()
+                    except Exception as e:
+                        create_log_entry(f"Error accessing root window, creating new one: {str(e)}")
+                        # If there's an error, create a new main window
+                        app.root = None
+                        app.show_main_window()
         else:
             create_log_entry("User not logged in, showing login window")
             # Wait a moment to ensure tray icon is ready

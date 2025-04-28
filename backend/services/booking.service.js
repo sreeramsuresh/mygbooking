@@ -252,7 +252,7 @@ const cancelBooking = async (bookingId, reason, performedBy) => {
 /**
  * Changes an auto-booked day to another day within user's preferences
  */
-const changeWorkDay = async (bookingId, newDate, performedBy) => {
+const changeWorkDay = async (bookingId, newDate, performedBy, seatId = null) => {
   try {
     const booking = await Booking.findByPk(bookingId, {
       include: [
@@ -313,22 +313,41 @@ const changeWorkDay = async (bookingId, newDate, performedBy) => {
       }
     }
     
-    // Check if any user has booked this user's current seat on the new date
-    const existingSeatBooking = await Booking.findOne({
-      where: {
-        seatId: booking.seatId,
-        bookingDate: newDate,
-        status: { [Op.ne]: "cancelled" },
-      },
-    });
-
-    // Update booking with new date and week number
+    // Determine the seat ID to use
+    let finalSeatId = booking.seatId; // Default to current seat
+    let seatChanged = false;
+    
+    // If a new seat ID is provided, use that
+    if (seatId) {
+      finalSeatId = seatId;
+      seatChanged = true;
+    } else {
+      // If no seat ID provided, check if the current seat is available
+      const existingSeatBooking = await Booking.findOne({
+        where: {
+          seatId: booking.seatId,
+          bookingDate: newDate,
+          status: { [Op.ne]: "cancelled" },
+        },
+      });
+      
+      // If the seat is already booked, throw an error
+      if (existingSeatBooking) {
+        throw new Error("Your current seat is already booked for the selected date. Please select a new seat.");
+      }
+    }
+    
+    // Update booking with new date, week number, and seat ID if changed
     const updates = {
       bookingDate: newDate,
       weekNumber: newWeekNumber,
-      // If the seat is already taken for the new date, we'll need to put this booking in pending state
-      status: existingSeatBooking ? "pending" : "confirmed"
+      status: "confirmed" // Always set to confirmed
     };
+    
+    // Add seat ID to updates if it changed
+    if (seatChanged) {
+      updates.seatId = finalSeatId;
+    }
     
     await booking.update(updates);
 
@@ -344,10 +363,7 @@ const changeWorkDay = async (bookingId, newDate, performedBy) => {
 
     return {
       ...booking.dataValues,
-      needsSeatSelection: !!existingSeatBooking,
-      message: existingSeatBooking ? 
-        "Your preferred seat is already booked for the selected date. Please select a new seat." : 
-        "Workday changed successfully."
+      message: "Workday changed successfully."
     };
   } catch (error) {
     throw error;
