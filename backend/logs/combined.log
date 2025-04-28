@@ -367,3 +367,4 @@
 2025-04-25T17:07:06.871Z info: User 4 has existing booking on 2025-05-23
 2025-04-25T17:07:06.873Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
 2025-04-25T17:07:06.875Z info: Initial auto-booking process completed successfully
+2025-04-28T06:38:35.560Z info: Checking database structure...
