@@ -103,7 +103,7 @@ const EmployeeDashboard = () => {
   } = dashboardData || {};
 
   return (
-    <Container sx={{ mt: 4, mb: 8 }}>
+    <Box sx={{ mt: 4, mb: 8, px: 3 }}>
       <Typography variant="h4" gutterBottom>
         Welcome, {user?.fullName}
       </Typography>
@@ -568,7 +568,7 @@ const EmployeeDashboard = () => {
           </Card>
         </Grid>
       </Grid>
-    </Container>
+    </Box>
   );
 };
 
