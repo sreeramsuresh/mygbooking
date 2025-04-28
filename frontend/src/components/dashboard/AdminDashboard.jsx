@@ -234,7 +234,7 @@ const AdminDashboard = () => {
     pendingRequests,
     todayAttendance,
     weeklyTrend,
-    desktopSessions
+    desktopSessions,
   } = dashboardData;
 
   // COLORS for charts
@@ -407,8 +407,8 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        
-        <Grid item xs={12} sm={6} lg={3}>
+
+        {/* <Grid item xs={12} sm={6} lg={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
@@ -437,7 +437,7 @@ const AdminDashboard = () => {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
 
         {/* Weekly Trend Chart */}
         <Grid item xs={12} lg={8}>

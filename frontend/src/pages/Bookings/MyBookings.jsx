@@ -730,7 +730,7 @@ const MyBookings = () => {
                                   }}
                                 >
                                   <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                                  Edit Booking
+                                  Change Seat
                                 </MenuItem>
                                 {booking.isAutoBooked && (
                                   <MenuItem
