@@ -1,1 +1,2 @@
-2025-04-25T12:18:52.819Z error: Database initialization failed: database "office_attendance" does not exist
+2025-04-28T09:57:38.035Z error: Database initialization failed: connect ECONNREFUSED 127.0.0.1:5432
+2025-04-28T10:03:10.913Z error: Database initialization failed: SQLITE_ERROR: near "[1,2,3,4,5]": syntax error

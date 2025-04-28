@@ -178,13 +178,19 @@ const bookingService = {
     }
   },
   
-  changeWorkDay: async (bookingId, newDate) => {
+  changeWorkDay: async (bookingId, newDate, seatId = null) => {
     try {
+      // Create request payload
+      const payload = { newDate };
+      
+      // If seatId is provided, add it to the payload
+      if (seatId) {
+        payload.seatId = seatId;
+      }
+      
       const response = await axiosInstance.post(
         `${API_ENDPOINT}/${bookingId}/change-workday`,
-        {
-          newDate,
-        }
+        payload
       );
       return response.data;
     } catch (error) {

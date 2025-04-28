@@ -557,7 +557,7 @@ exports.forceAutoBookingForAll = async (req, res) => {
 exports.changeWorkDay = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const { newDate } = req.body;
+    const { newDate, seatId } = req.body;
 
     if (!bookingId) {
       return apiResponse.badRequest(res, "Booking ID is required");
@@ -567,17 +567,17 @@ exports.changeWorkDay = async (req, res) => {
       return apiResponse.badRequest(res, "New date is required");
     }
 
+    // Pass the seatId if provided
     const result = await bookingService.changeWorkDay(
       bookingId,
       newDate,
-      req.userId
+      req.userId,
+      seatId
     );
 
     return apiResponse.success(
       res, 
-      result.needsSeatSelection 
-        ? "Workday changed, but you need to select a new seat" 
-        : "Workday changed successfully", 
+      "Workday changed successfully", 
       result
     );
   } catch (error) {

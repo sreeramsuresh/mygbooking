@@ -29,26 +29,42 @@ import {
   MenuItem,
   InputAdornment,
   OutlinedInput,
+  Tabs,
+  Tab,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  Stack,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ComputerIcon from '@mui/icons-material/Computer';
 import SearchIcon from '@mui/icons-material/Search';
 import WifiIcon from '@mui/icons-material/Wifi';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import HistoryIcon from '@mui/icons-material/History';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import desktopService from '../../services/desktopService';
 
 const DesktopSessions = () => {
+  // Tab state
+  const [tabValue, setTabValue] = useState(0);
+
+  // Active sessions state
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Pagination
+  // Pagination for active sessions
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Search
+  // Search for active sessions
   const [searchQuery, setSearchQuery] = useState('');
 
   // Reset Dialog
@@ -62,6 +78,17 @@ const DesktopSessions = () => {
   // Auto-refresh
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(null);
+  
+  // Attendance history state
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceError, setAttendanceError] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [attendancePage, setAttendancePage] = useState(0);
+  const [attendanceRowsPerPage, setAttendanceRowsPerPage] = useState(10);
+  const [totalAttendanceRecords, setTotalAttendanceRecords] = useState(0);
 
   const fetchSessions = async () => {
     try {
@@ -84,6 +111,43 @@ const DesktopSessions = () => {
     }
   };
 
+  const fetchAttendanceHistory = async () => {
+    try {
+      setAttendanceLoading(true);
+      setAttendanceError('');
+
+      const params = {
+        limit: attendanceRowsPerPage,
+        offset: attendancePage * attendanceRowsPerPage,
+      };
+
+      // Add optional filters if they exist
+      if (startDate) {
+        params.startDate = startDate.toISOString().split('T')[0];
+      }
+      if (endDate) {
+        params.endDate = endDate.toISOString().split('T')[0];
+      }
+      if (selectedUserId) {
+        params.userId = selectedUserId;
+      }
+
+      const response = await desktopService.getAttendanceHistory(params);
+
+      if (response.success) {
+        setAttendanceHistory(response.data.records);
+        setTotalAttendanceRecords(response.data.total);
+      } else {
+        setAttendanceError(response.message || 'Failed to fetch attendance history');
+      }
+    } catch (err) {
+      setAttendanceError('An error occurred while fetching attendance history');
+      console.error('Fetch attendance history error:', err);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
 
@@ -99,7 +163,9 @@ const DesktopSessions = () => {
     // Set up auto-refresh interval
     if (autoRefresh) {
       const interval = setInterval(() => {
-        fetchSessions();
+        if (tabValue === 0) {
+          fetchSessions();
+        }
       }, 30000); // 30 seconds refresh
       setRefreshInterval(interval);
     } else {
@@ -114,7 +180,14 @@ const DesktopSessions = () => {
         clearInterval(refreshInterval);
       }
     };
-  }, [autoRefresh]);
+  }, [autoRefresh, tabValue]);
+  
+  // Load attendance history when tab changes to history or when filters change
+  useEffect(() => {
+    if (tabValue === 1) {
+      fetchAttendanceHistory();
+    }
+  }, [tabValue, attendancePage, attendanceRowsPerPage, startDate, endDate, selectedUserId]);
 
   useEffect(() => {
     // Apply search filter
@@ -198,6 +271,29 @@ const DesktopSessions = () => {
     if (!timestamp) return 'N/A';
     return new Date(timestamp * 1000).toLocaleString();
   };
+  
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+  
+  // Attendance history pagination handlers
+  const handleAttendanceChangePage = (event, newPage) => {
+    setAttendancePage(newPage);
+  };
+
+  const handleAttendanceChangeRowsPerPage = (event) => {
+    setAttendanceRowsPerPage(parseInt(event.target.value, 10));
+    setAttendancePage(0);
+  };
+  
+  // Reset attendance history filters
+  const resetAttendanceFilters = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setSelectedUserId('');
+    setAttendancePage(0);
+  };
 
   return (
     <Container sx={{ mt: 4, mb: 8 }}>
@@ -209,10 +305,12 @@ const DesktopSessions = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4">
-          <ComputerIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Desktop Sessions
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <ComputerIcon sx={{ mr: 1, fontSize: 28 }} />
+          <Typography variant="h4">
+            Desktop Attendance
+          </Typography>
+        </Box>
 
         <Box>
           <Tooltip title={autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh (30s)'}>
@@ -225,146 +323,338 @@ const DesktopSessions = () => {
             />
           </Tooltip>
           
-          <Tooltip title="Refresh sessions">
-            <IconButton onClick={fetchSessions} sx={{ mr: 1 }}>
+          <Tooltip title="Refresh data">
+            <IconButton 
+              onClick={tabValue === 0 ? fetchSessions : fetchAttendanceHistory} 
+              sx={{ mr: 1 }}
+            >
               <RefreshIcon />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Paper sx={{ mb: 3, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <FormControl fullWidth variant="outlined" size="small">
-            <InputLabel htmlFor="search-sessions">Search Sessions</InputLabel>
-            <OutlinedInput
-              id="search-sessions"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              startAdornment={
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              }
-              label="Search Sessions"
-              placeholder="Search by name, email, computer name, IP address, etc."
-            />
-          </FormControl>
-        </Box>
+      <Paper sx={{ mb: 3 }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          variant="fullWidth"
+        >
+          <Tab 
+            label="Live Sessions" 
+            icon={<WifiIcon />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="Attendance History" 
+            icon={<HistoryIcon />}
+            iconPosition="start" 
+          />
+        </Tabs>
       </Paper>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : filteredSessions.length > 0 ? (
-        <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>User</TableCell>
-                  <TableCell>Department</TableCell>
-                  <TableCell>Network</TableCell>
-                  <TableCell>Computer Info</TableCell>
-                  <TableCell>Connection Details</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredSessions
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {session.user?.fullName || 'Unknown'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {session.user?.email || session.email || 'No email'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{session.user?.department || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <WifiIcon fontSize="small" sx={{ mr: 0.5, color: 'success.main' }} />
-                          <Typography variant="body2">
-                            {session.ssid || 'Unknown'}
-                          </Typography>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {session.ip_address || 'No IP'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {session.computer_name || 'Unknown'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {session.mac_address || 'No MAC'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          Connected: {session.connection_start_time_formatted || 'Unknown'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Duration: {session.connection_duration_formatted || 'N/A'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title="Reset MAC Address">
-                          <IconButton
-                            color="warning"
-                            onClick={() => handleOpenResetDialog(session)}
-                            size="small"
-                          >
-                            <RestartAltIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+      {/* Active Sessions Tab */}
+      {tabValue === 0 && (
+        <>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredSessions.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Paper>
-      ) : (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom>
-            No active desktop sessions found
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            {searchQuery
-              ? 'No sessions match your search criteria.'
-              : 'No users are currently connected with the desktop application.'}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={fetchSessions}
-          >
-            Refresh
-          </Button>
-        </Paper>
+          <Paper sx={{ mb: 3, p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <FormControl fullWidth variant="outlined" size="small">
+                <InputLabel htmlFor="search-sessions">Search Sessions</InputLabel>
+                <OutlinedInput
+                  id="search-sessions"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  label="Search Sessions"
+                  placeholder="Search by name, email, computer name, IP address, etc."
+                />
+              </FormControl>
+            </Box>
+          </Paper>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredSessions.length > 0 ? (
+            <Paper>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Department</TableCell>
+                      <TableCell>Network</TableCell>
+                      <TableCell>Computer Info</TableCell>
+                      <TableCell>Connection Details</TableCell>
+                      <TableCell align="center">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredSessions
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((session) => (
+                        <TableRow key={session.id}>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {session.user?.fullName || 'Unknown'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {session.user?.email || session.email || 'No email'}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{session.user?.department || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <WifiIcon fontSize="small" sx={{ mr: 0.5, color: 'success.main' }} />
+                              <Typography variant="body2">
+                                {session.ssid || 'Unknown'}
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                              {session.ip_address || 'No IP'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {session.computer_name || 'Unknown'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {session.mac_address || 'No MAC'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              Connected: {session.connection_start_time_formatted || 'Unknown'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Duration: {session.connection_duration_formatted || 'N/A'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="Reset MAC Address">
+                              <IconButton
+                                color="warning"
+                                onClick={() => handleOpenResetDialog(session)}
+                                size="small"
+                              >
+                                <RestartAltIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={filteredSessions.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Paper>
+          ) : (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6" gutterBottom>
+                No active desktop sessions found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                {searchQuery
+                  ? 'No sessions match your search criteria.'
+                  : 'No users are currently connected with the desktop application.'}
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={fetchSessions}
+              >
+                Refresh
+              </Button>
+            </Paper>
+          )}
+        </>
+      )}
+
+      {/* Attendance History Tab */}
+      {tabValue === 1 && (
+        <>
+          {attendanceError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {attendanceError}
+            </Alert>
+          )}
+
+          <Paper sx={{ mb: 3, p: 2 }}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={6} md={3}>
+                  <DatePicker
+                    label="Start Date"
+                    value={startDate}
+                    onChange={(newValue) => setStartDate(newValue)}
+                    slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <DatePicker
+                    label="End Date"
+                    value={endDate}
+                    onChange={(newValue) => setEndDate(newValue)}
+                    slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>User</InputLabel>
+                    <Select
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      label="User"
+                    >
+                      <MenuItem value="">All Users</MenuItem>
+                      {filteredSessions.map((session) => (
+                        session.user && (
+                          <MenuItem key={session.user.id} value={session.user.id}>
+                            {session.user.fullName || session.user.email}
+                          </MenuItem>
+                        )
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<RefreshIcon />}
+                      onClick={fetchAttendanceHistory}
+                      fullWidth
+                    >
+                      Apply Filters
+                    </Button>
+                    <Button
+                      variant="text"
+                      onClick={resetAttendanceFilters}
+                    >
+                      Reset
+                    </Button>
+                  </Stack>
+                </Grid>
+              </Grid>
+            </LocalizationProvider>
+          </Paper>
+
+          {attendanceLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : attendanceHistory.length > 0 ? (
+            <Paper>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Department</TableCell>
+                      <TableCell>Device Info</TableCell>
+                      <TableCell>Connection Time</TableCell>
+                      <TableCell>Disconnection Time</TableCell>
+                      <TableCell>Duration</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {attendanceHistory
+                      .map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {record.user?.fullName || 'Unknown'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {record.user?.email || 'No email'}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{record.user?.department || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {record.computerName || 'Unknown'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {record.macAddress || 'No MAC'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {record.connectionStartTimeFormatted || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.connectionEndTimeFormatted || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.connectionDurationFormatted || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={record.status}
+                              color={record.isActive ? "success" : "default"}
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={totalAttendanceRecords}
+                rowsPerPage={attendanceRowsPerPage}
+                page={attendancePage}
+                onPageChange={handleAttendanceChangePage}
+                onRowsPerPageChange={handleAttendanceChangeRowsPerPage}
+              />
+            </Paper>
+          ) : (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6" gutterBottom>
+                No attendance records found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Try adjusting your filters or refresh to see the latest data.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={fetchAttendanceHistory}
+              >
+                Refresh
+              </Button>
+            </Paper>
+          )}
+        </>
       )}
 
       {/* Reset MAC Address Dialog */}
