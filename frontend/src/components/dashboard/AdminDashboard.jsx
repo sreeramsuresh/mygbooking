@@ -43,6 +43,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
+import ComputerIcon from "@mui/icons-material/Computer";
 
 import dashboardService from "../../services/dashboardService";
 import bookingService from "../../services/bookingService";
@@ -233,6 +234,7 @@ const AdminDashboard = () => {
     pendingRequests,
     todayAttendance,
     weeklyTrend,
+    desktopSessions
   } = dashboardData;
 
   // COLORS for charts
@@ -402,6 +404,37 @@ const AdminDashboard = () => {
               <Typography variant="body2" color="text.secondary" align="center">
                 Check-ins recorded today
               </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} lg={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Box
+                  sx={{
+                    backgroundColor: "secondary.light",
+                    borderRadius: "50%",
+                    p: 1,
+                    mr: 2,
+                  }}
+                >
+                  <ComputerIcon />
+                </Box>
+                <Typography variant="h6">Desktop Sessions</Typography>
+              </Box>
+              <Typography variant="h3" align="center" sx={{ my: 2 }}>
+                {desktopSessions?.activeSessions || 0}
+              </Typography>
+              <Button
+                fullWidth
+                variant="outlined"
+                component={RouterLink}
+                to="/admin/desktop-sessions"
+              >
+                View Connected Users
+              </Button>
             </CardContent>
           </Card>
         </Grid>
@@ -589,6 +622,17 @@ const AdminDashboard = () => {
                     startIcon={<AssignmentIcon />}
                   >
                     Manage Requests
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    component={RouterLink}
+                    to="/admin/desktop-sessions"
+                    startIcon={<ComputerIcon />}
+                  >
+                    Desktop Sessions
                   </Button>
                 </Grid>
               </Grid>
