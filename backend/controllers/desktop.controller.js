@@ -23,7 +23,10 @@ exports.desktopLogin = async (req, res) => {
     }
 
     // Validate SSID
-    if (ssid !== "Vadakkemadom 5G") {
+    // if (ssid !== "Vadakkemadom 5G") {
+    //   return apiResponse.badRequest(res, "Invalid network connection");
+    // }
+    if (ssid !== "GIGLABZ_5G") {
       return apiResponse.badRequest(res, "Invalid network connection");
     }
 
@@ -143,7 +146,10 @@ exports.trackConnection = async (req, res) => {
     }
 
     // Validate SSID
-    if (ssid !== "Vadakkemadom 5G") {
+    // if (ssid !== "Vadakkemadom 5G") {
+    //   return apiResponse.badRequest(res, "Invalid network connection");
+    // }
+    if (ssid !== "GIGLABZ_5G") {
       return apiResponse.badRequest(res, "Invalid network connection");
     }
 
@@ -349,10 +355,10 @@ exports.getActiveSessions = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'username', 'email', 'fullName', 'department'],
-        }
+          attributes: ["id", "username", "email", "fullName", "department"],
+        },
       ],
-      order: [['lastActivityAt', 'DESC']],
+      order: [["lastActivityAt", "DESC"]],
     });
 
     console.log(`Found ${activeSessions.length} active desktop sessions`);
@@ -369,7 +375,7 @@ exports.getActiveSessions = async (req, res) => {
               macAddress: session.macAddress,
               isActive: true,
             },
-            order: [['connectionStartTime', 'DESC']],
+            order: [["connectionStartTime", "DESC"]],
           });
 
           // Calculate connection duration if available
@@ -379,31 +385,42 @@ exports.getActiveSessions = async (req, res) => {
           let connectionStartTimeFormatted = null;
 
           if (latestRecord) {
-            connectionStartTime = Math.floor(latestRecord.connectionStartTime.getTime() / 1000);
-            connectionStartTimeFormatted = latestRecord.connectionStartTime.toISOString()
-              .replace('T', ' ')
+            connectionStartTime = Math.floor(
+              latestRecord.connectionStartTime.getTime() / 1000
+            );
+            connectionStartTimeFormatted = latestRecord.connectionStartTime
+              .toISOString()
+              .replace("T", " ")
               .substring(0, 19);
-            
+
             if (latestRecord.connectionDuration) {
               connectionDuration = latestRecord.connectionDuration;
-              
+
               // Format duration as HH:MM:SS
               const hours = Math.floor(connectionDuration / 3600);
               const minutes = Math.floor((connectionDuration % 3600) / 60);
               const seconds = Math.floor(connectionDuration % 60);
-              connectionDurationFormatted = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+              connectionDurationFormatted = `${hours
+                .toString()
+                .padStart(2, "0")}:${minutes
+                .toString()
+                .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
             } else {
               // Calculate duration from start time until now
               const now = new Date();
-              connectionDuration = (now.getTime() - latestRecord.connectionStartTime.getTime()) / 1000;
-              
+              connectionDuration =
+                (now.getTime() - latestRecord.connectionStartTime.getTime()) /
+                1000;
+
               // Format duration as HH:MM:SS
               const hours = Math.floor(connectionDuration / 3600);
               const minutes = Math.floor((connectionDuration % 3600) / 60);
               const seconds = Math.floor(connectionDuration % 60);
-              connectionDurationFormatted = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+              connectionDurationFormatted = `${hours
+                .toString()
+                .padStart(2, "0")}:${minutes
+                .toString()
+                .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
             }
           }
 
@@ -420,14 +437,16 @@ exports.getActiveSessions = async (req, res) => {
             connection_duration_formatted: connectionDurationFormatted,
             connection_start_time: connectionStartTime,
             connection_start_time_formatted: connectionStartTimeFormatted,
-            user: session.user ? {
-              id: session.user.id,
-              username: session.user.username,
-              email: session.user.email,
-              fullName: session.user.fullName,
-              department: session.user.department,
-            } : null,
-            lastActivityAt: session.lastActivityAt
+            user: session.user
+              ? {
+                  id: session.user.id,
+                  username: session.user.username,
+                  email: session.user.email,
+                  fullName: session.user.fullName,
+                  department: session.user.department,
+                }
+              : null,
+            lastActivityAt: session.lastActivityAt,
           };
         } catch (err) {
           console.error("Error processing session details:", err);
@@ -436,7 +455,7 @@ exports.getActiveSessions = async (req, res) => {
             ssid: session.ssid,
             mac_address: session.macAddress,
             event_type: "unknown",
-            error: "Failed to process session details"
+            error: "Failed to process session details",
           };
         }
       })
