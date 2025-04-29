@@ -182,7 +182,7 @@ const PendingRequests = () => {
   };
 
   return (
-    <Container sx={{ mt: 4, mb: 8 }}>
+    <Box sx={{ mt: 4, mb: 8, px: 3 }}>
       {/* Breadcrumbs Navigation */}
       <Breadcrumbs
         separator={<NavigateNextIcon fontSize="small" />}
@@ -451,7 +451,7 @@ const PendingRequests = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

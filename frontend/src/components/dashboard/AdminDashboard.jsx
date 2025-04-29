@@ -48,16 +48,16 @@ import ComputerIcon from "@mui/icons-material/Computer";
 import dashboardService from "../../services/dashboardService";
 import bookingService from "../../services/bookingService";
 import userService from "../../services/userService";
-import { 
-  FormControl, 
-  InputLabel, 
-  MenuItem, 
-  Select, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
+import {
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   DialogActions,
-  TextField 
+  TextField,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -118,7 +118,7 @@ const AdminDashboard = () => {
 
     return () => clearInterval(interval);
   }, []);
-  
+
   const handleOpenResetDialog = () => {
     setSelectedUser("");
     setResetDate(new Date());
@@ -126,24 +126,27 @@ const AdminDashboard = () => {
     setResetResult(null);
     setResetDialogOpen(true);
   };
-  
+
   const handleCloseResetDialog = () => {
     setResetDialogOpen(false);
   };
-  
+
   const handleResetAndAutoBook = async () => {
     if (!selectedUser) {
       setResetError("Please select a user");
       return;
     }
-    
+
     try {
       setIsResetting(true);
       setResetError("");
-      
+
       const formattedDate = resetDate.toISOString().split("T")[0];
-      const response = await bookingService.resetAndAutoBook(selectedUser, formattedDate);
-      
+      const response = await bookingService.resetAndAutoBook(
+        selectedUser,
+        formattedDate
+      );
+
       if (response.success) {
         setResetResult(response.data);
         // Refresh dashboard data after a short delay
@@ -231,7 +234,7 @@ const AdminDashboard = () => {
     pendingRequests,
     todayAttendance,
     weeklyTrend,
-    desktopSessions
+    desktopSessions,
   } = dashboardData;
 
   // COLORS for charts
@@ -251,7 +254,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <Container sx={{ mt: 4, mb: 8 }}>
+    <Box sx={{ mt: 4, mb: 8, px: 3 }}>
       <Box
         sx={{
           display: "flex",
@@ -268,7 +271,6 @@ const AdminDashboard = () => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
-
         </Box>
       </Box>
 
@@ -405,8 +407,8 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        
-        <Grid item xs={12} sm={6} lg={3}>
+
+        {/* <Grid item xs={12} sm={6} lg={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
@@ -435,7 +437,7 @@ const AdminDashboard = () => {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
 
         {/* Weekly Trend Chart */}
         <Grid item xs={12} lg={8}>
@@ -585,10 +587,9 @@ const AdminDashboard = () => {
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ pb: 2 }}>
                 Quick Actions
               </Typography>
-              <Divider sx={{ my: 2 }} />
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <Button
@@ -639,8 +640,7 @@ const AdminDashboard = () => {
           </Card>
         </Grid>
       </Grid>
-      
-    </Container>
+    </Box>
   );
 };
 

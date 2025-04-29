@@ -23,7 +23,7 @@ import {
   FormatListBulleted as RequestsIcon,
   Settings as SettingsIcon,
   AutoAwesome as AutoBookingIcon,
-  Computer as ComputerIcon
+  Computer as ComputerIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
@@ -59,14 +59,14 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       path: "/profile",
     },
   ];
-  
+
   // Menu items for regular employees and managers (not admins)
   const employeeMenuItems = [
-    {
-      text: "New Booking",
-      icon: <CalendarIcon />,
-      path: "/bookings/new",
-    },
+    // {
+    //   text: "New Booking",
+    //   icon: <CalendarIcon />,
+    //   path: "/bookings/new",
+    // },
     {
       text: "My Bookings",
       icon: <EventIcon />,
@@ -152,42 +152,43 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-        
+
         {/* Employee-specific menu items (not for admins) */}
-        {!isAdmin && employeeMenuItems.map((item) => (
-          <ListItem
-            button
-            key={item.text}
-            onClick={() => handleNavigation(item.path)}
-            selected={isActive(item.path)}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: theme.palette.primary.light,
-                color: theme.palette.primary.contrastText,
-                "& .MuiListItemIcon-root": {
-                  color: theme.palette.primary.contrastText,
-                },
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              },
-              borderRadius: 1,
-              my: 0.5,
-              mx: 1,
-            }}
-          >
-            <ListItemIcon
+        {!isAdmin &&
+          employeeMenuItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              onClick={() => handleNavigation(item.path)}
+              selected={isActive(item.path)}
               sx={{
-                color: isActive(item.path)
-                  ? theme.palette.primary.contrastText
-                  : "inherit",
+                "&.Mui-selected": {
+                  backgroundColor: theme.palette.primary.light,
+                  color: theme.palette.primary.contrastText,
+                  "& .MuiListItemIcon-root": {
+                    color: theme.palette.primary.contrastText,
+                  },
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.main,
+                  },
+                },
+                borderRadius: 1,
+                my: 0.5,
+                mx: 1,
               }}
             >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItem>
-        ))}
+              <ListItemIcon
+                sx={{
+                  color: isActive(item.path)
+                    ? theme.palette.primary.contrastText
+                    : "inherit",
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItem>
+          ))}
 
         {/* Managers and Admin items */}
         {(isManager || isAdmin) && (
