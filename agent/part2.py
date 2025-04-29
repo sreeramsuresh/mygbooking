@@ -245,7 +245,7 @@ class ApiClient:
             self.app.log(f"Error getting WiFi SSID: {str(e)}", "error")
             
         # If we failed to get the SSID, return the target SSID
-        return self.app.config.get("target_ssid", "Vadakkemadom 5g")
+        return self.app.config.get("target_ssid", "GIGLABZ_5G")
     
     def login(self, email, password, callback=None):
         """Login to the API and get access token"""

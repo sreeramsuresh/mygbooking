@@ -45,7 +45,7 @@ ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
 # Default configuration
 DEFAULT_CONFIG = {
     "api_base_url": "http://localhost:9600",
-    "target_ssid": "Vadakkemadom 5g",
+    "target_ssid": "GIGLABZ_5G",
     "auto_start": True,
     "first_run": True
 }
@@ -548,7 +548,7 @@ This information is used solely for attendance tracking purposes.
         # Access the wifi_monitor through the app
         if hasattr(self, 'wifi_monitor'):
             # Set the current SSID to target SSID to force connection
-            target_ssid = self.config.get("target_ssid", "Vadakkemadom 5g")
+            target_ssid = self.config.get("target_ssid", "GIGLABZ_5G")
             self.wifi_monitor.current_ssid = target_ssid
             self.current_ssid = target_ssid
             

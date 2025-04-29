@@ -24,7 +24,7 @@ exports.desktopLogin = async (req, res) => {
 
     // IMPORTANT: Skipping SSID validation to allow connections from any network
     // The commented code below shows the original validation
-    // if (ssid !== "Vadakkemadom 5g") {
+    // if (ssid !== "GIGLABZ_5G") {
     //   return apiResponse.badRequest(res, "Invalid network connection");
     // }
 
@@ -180,7 +180,7 @@ exports.trackConnection = async (req, res) => {
 
     // IMPORTANT: Skipping SSID validation to allow connections from any network
     // The commented code below shows the original validation
-    // if (ssid !== "Vadakkemadom 5g") {
+    // if (ssid !== "GIGLABZ_5G") {
     //   return apiResponse.badRequest(res, "Invalid network connection");
     // }
 

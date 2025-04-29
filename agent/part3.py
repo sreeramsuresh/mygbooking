@@ -156,7 +156,7 @@ class ConnectionDatabase:
 class WiFiMonitor:
     def __init__(self, app):
         self.app = app
-        self.target_ssid = app.config.get("target_ssid", "Vadakkemadom 5g")
+        self.target_ssid = app.config.get("target_ssid", "GIGLABZ_5G")
         self.current_ssid = None
         self.last_ssid = None
         self.is_connected_to_target = False
