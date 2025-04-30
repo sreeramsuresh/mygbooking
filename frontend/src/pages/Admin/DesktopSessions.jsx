@@ -44,6 +44,7 @@ import WifiIcon from '@mui/icons-material/Wifi';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import HistoryIcon from '@mui/icons-material/History';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -74,6 +75,9 @@ const DesktopSessions = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [searchType, setSearchType] = useState('email');
   const [searchValue, setSearchValue] = useState('');
+  
+  // Cleanup state
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   // Auto-refresh
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -166,7 +170,7 @@ const DesktopSessions = () => {
         if (tabValue === 0) {
           fetchSessions();
         }
-      }, 30000); // 30 seconds refresh
+      }, 15000); // 15 seconds refresh (more frequent to catch changes faster)
       setRefreshInterval(interval);
     } else {
       if (refreshInterval) {
@@ -272,6 +276,29 @@ const DesktopSessions = () => {
     return new Date(timestamp * 1000).toLocaleString();
   };
   
+  const handleCleanupInactiveSessions = async () => {
+    try {
+      setCleanupLoading(true);
+      setError('');
+      
+      const response = await desktopService.cleanupInactiveSessions();
+      
+      if (response.success) {
+        // Show success message
+        alert(`Successfully cleaned up ${response.data.processedSessions.length} inactive sessions`);
+        // Refresh the sessions list
+        fetchSessions();
+      } else {
+        setError(response.message || 'Failed to clean up inactive sessions');
+      }
+    } catch (err) {
+      setError('An error occurred while cleaning up inactive sessions');
+      console.error('Cleanup error:', err);
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+  
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -331,6 +358,19 @@ const DesktopSessions = () => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          
+          {tabValue === 0 && (
+            <Tooltip title="Clean up inactive sessions">
+              <IconButton 
+                onClick={handleCleanupInactiveSessions}
+                disabled={cleanupLoading}
+                color="warning"
+                sx={{ mr: 1 }}
+              >
+                {cleanupLoading ? <CircularProgress size={24} /> : <CleaningServicesIcon />}
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Box>
 

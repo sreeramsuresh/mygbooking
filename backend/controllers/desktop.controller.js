@@ -234,6 +234,40 @@ exports.trackConnection = async (req, res) => {
       await desktopSession.update({
         lastActivityAt: new Date(),
       });
+    } else if (event_type === "heartbeat") {
+      // Handle heartbeat event - just update the lastActivityAt timestamp
+      console.log(`Received heartbeat from ${user.email} at ${new Date().toISOString()}`);
+      
+      // Update the desktop session with the current time
+      await desktopSession.update({
+        lastActivityAt: new Date(),
+      });
+      
+      // Find the active connection record
+      record = await AttendanceRecord.findOne({
+        where: {
+          userId: user.id,
+          macAddress: mac_address,
+          isActive: true,
+        },
+        order: [["connectionStartTime", "DESC"]],
+      });
+      
+      if (!record) {
+        // No active connection found, create a new one
+        console.log(`No active connection found for ${user.email}, creating new record`);
+        record = await AttendanceRecord.create({
+          userId: user.id,
+          ssid,
+          ipAddress: ip_address,
+          macAddress: mac_address,
+          computerName: computer_name,
+          connectionStartTime: new Date(),
+          isActive: true,
+        });
+      }
+      
+      return apiResponse.success(res, "Heartbeat recorded successfully");
 
       // Also update or create any other active session records
       const activeRecords = await AttendanceRecord.findAll({
@@ -416,7 +450,10 @@ exports.getActiveSessions = async (req, res) => {
         "Only administrators can view active desktop sessions"
       );
     }
-
+    
+    // First run the auto cleanup to remove any stale sessions
+    const cleanedCount = await autoCleanupInactiveSessions();
+    
     // Get all active desktop sessions with user details
     const activeSessions = await DesktopSession.findAll({
       where: { isActive: true },
@@ -429,7 +466,7 @@ exports.getActiveSessions = async (req, res) => {
       order: [["lastActivityAt", "DESC"]],
     });
 
-    console.log(`Found ${activeSessions.length} active desktop sessions`);
+    console.log(`Found ${activeSessions.length} active desktop sessions${cleanedCount > 0 ? ` (cleaned up ${cleanedCount} stale sessions)` : ''}`);
 
     // Get attendance records for these sessions
     const sessionDetails = await Promise.all(
@@ -569,6 +606,170 @@ exports.getActiveSessions = async (req, res) => {
   } catch (error) {
     console.error("Error in getActiveSessions:", error);
     return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * Check and clean up inactive sessions
+ * This function marks sessions as inactive if they haven't sent a heartbeat in 10+ minutes
+ */
+exports.cleanupInactiveSessions = async (req, res) => {
+  try {
+    // Check if user has admin permission to perform this action
+    if (
+      !req.userRoles || (!req.userRoles.includes("ROLE_ADMIN") &&
+      !req.userRoles.includes("admin"))
+    ) {
+      return apiResponse.forbidden(
+        res,
+        "Only administrators can manually clean up inactive sessions"
+      );
+    }
+    
+    // Calculate cutoff time (10 minutes ago)
+    const tenMinutesAgo = new Date();
+    tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+    
+    // Find active sessions that haven't been updated in the last 10 minutes
+    const outdatedSessions = await DesktopSession.findAll({
+      where: {
+        isActive: true,
+        lastActivityAt: {
+          [db.Sequelize.Op.lt]: tenMinutesAgo
+        }
+      },
+      include: [
+        {
+          model: db.user,
+          attributes: ['id', 'username', 'email']
+        }
+      ]
+    });
+    
+    console.log(`Found ${outdatedSessions.length} inactive sessions older than 10 minutes`);
+    
+    // Process each outdated session
+    const processedSessions = [];
+    
+    for (const session of outdatedSessions) {
+      try {
+        // Find active attendance records for this session
+        const activeRecords = await db.attendanceRecord.findAll({
+          where: {
+            userId: session.userId,
+            macAddress: session.macAddress,
+            isActive: true
+          }
+        });
+        
+        // Mark attendance records as inactive
+        for (const record of activeRecords) {
+          const now = new Date();
+          const duration = (now.getTime() - record.connectionStartTime.getTime()) / 1000;
+          
+          await record.update({
+            connectionEndTime: now,
+            connectionDuration: duration,
+            isActive: false
+          });
+          
+          console.log(`Marked attendance record ${record.id} for user ${session.user?.email || session.userId} as inactive (duration: ${duration}s)`);
+        }
+        
+        // Mark the session as inactive
+        await session.update({
+          isActive: false
+        });
+        
+        processedSessions.push({
+          id: session.id,
+          userId: session.userId,
+          email: session.user?.email || 'Unknown',
+          lastActivity: session.lastActivityAt,
+          recordsUpdated: activeRecords.length
+        });
+        
+      } catch (err) {
+        console.error(`Error processing session ${session.id}:`, err);
+      }
+    }
+    
+    return apiResponse.success(
+      res, 
+      `Successfully cleaned up ${processedSessions.length} inactive sessions`,
+      {
+        processedSessions,
+        totalFound: outdatedSessions.length
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error cleaning up inactive sessions:', error);
+    return apiResponse.serverError(res, error);
+  }
+};
+
+/**
+ * This function runs automatically during getActiveSessions to clean up stale sessions
+ */
+const autoCleanupInactiveSessions = async () => {
+  try {
+    // Calculate cutoff time (10 minutes ago)
+    const tenMinutesAgo = new Date();
+    tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+    
+    // Find active sessions that haven't been updated in the last 10 minutes
+    const outdatedSessions = await DesktopSession.findAll({
+      where: {
+        isActive: true,
+        lastActivityAt: {
+          [db.Sequelize.Op.lt]: tenMinutesAgo
+        }
+      }
+    });
+    
+    console.log(`Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than 10 minutes`);
+    
+    // Process each outdated session
+    for (const session of outdatedSessions) {
+      try {
+        // Find active attendance records for this session
+        const activeRecords = await db.attendanceRecord.findAll({
+          where: {
+            userId: session.userId,
+            macAddress: session.macAddress,
+            isActive: true
+          }
+        });
+        
+        // Mark attendance records as inactive
+        for (const record of activeRecords) {
+          const now = new Date();
+          const duration = (now.getTime() - record.connectionStartTime.getTime()) / 1000;
+          
+          await record.update({
+            connectionEndTime: now,
+            connectionDuration: duration,
+            isActive: false
+          });
+          
+          console.log(`Auto cleanup: Marked attendance record ${record.id} for user ${session.userId} as inactive (duration: ${duration}s)`);
+        }
+        
+        // Mark the session as inactive
+        await session.update({
+          isActive: false
+        });
+        
+      } catch (err) {
+        console.error(`Auto cleanup: Error processing session ${session.id}:`, err);
+      }
+    }
+    
+    return outdatedSessions.length;
+  } catch (error) {
+    console.error('Auto cleanup: Error cleaning up inactive sessions:', error);
+    return 0;
   }
 };
 
