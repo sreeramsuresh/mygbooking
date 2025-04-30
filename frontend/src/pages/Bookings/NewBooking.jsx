@@ -257,7 +257,7 @@ const NewBooking = () => {
                     sx={{ mt: 2, mb: 2 }}
                   >
                     Seats can be booked up to 2 weeks in advance. Weekend
-                    bookings are not available.
+                    bookings are not available. You can book additional days beyond your regular assigned days.
                   </Alert>
 
                   <Button

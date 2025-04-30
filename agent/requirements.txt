@@ -1,3 +1,6 @@
 PyQt5>=5.15.0
 requests>=2.25.0
 configparser>=5.0.0
+pyinstaller>=5.6.0
+pywin32>=305
+

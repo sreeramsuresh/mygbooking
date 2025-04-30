@@ -69,12 +69,9 @@ const createBooking = async (userId, seatId, bookingDate, performedBy) => {
       },
     });
 
-    // Check if user is exceeding their required days per week
-    if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-      throw new Error(
-        `You have already booked your required ${user.requiredDaysPerWeek} days for this week. Cancel an existing booking if you want to book a different day.`
-      );
-    }
+    // No longer check if user is exceeding their required days per week
+    // This allows users to book extra days beyond their required minimum
+    // Comment: Previously restricted users to their requiredDaysPerWeek, now they can book additional days
 
     // Create the booking
     const booking = await Booking.create({
@@ -159,12 +156,8 @@ const updateBooking = async (bookingId, updates, performedBy) => {
             },
           });
 
-          // Check if user is exceeding their required days per week
-          if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-            throw new Error(
-              `You have already booked your required ${user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
-            );
-          }
+          // No longer check if user is exceeding their required days per week
+          // This allows users to book extra days beyond their required minimum
         }
       }
     }
@@ -305,12 +298,8 @@ const changeWorkDay = async (bookingId, newDate, performedBy, seatId = null) => 
         },
       });
 
-      // Check if user is exceeding their required days per week
-      if (existingWeeklyBookings >= booking.user.requiredDaysPerWeek) {
-        throw new Error(
-          `You have already booked your required ${booking.user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
-        );
-      }
+      // No longer check if user is exceeding their required days per week
+      // This allows users to book extra days beyond their required minimum
     }
     
     // Determine the seat ID to use
