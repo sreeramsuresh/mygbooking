@@ -107,7 +107,7 @@ const MyRequests = () => {
   };
 
   return (
-    <Container sx={{ mt: 4, mb: 8 }}>
+    <Box sx={{ mt: 4, mb: 8, px: 3 }}>
       <Box
         sx={{
           display: "flex",
@@ -260,7 +260,7 @@ const MyRequests = () => {
           </Box>
         </Paper>
       )}
-    </Container>
+    </Box>
   );
 };
 

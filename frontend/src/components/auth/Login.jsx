@@ -50,8 +50,16 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8, mb: 4 }}>
+    <Container
+      maxWidth="sm"
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Box sx={{ width: "100%" }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Office Attendance Tracker
