@@ -99,6 +99,7 @@ class ApiClient:
         self.session = requests.Session()
         self.connected = False
         self.connection_start_time = None
+        self.last_heartbeat_time = None
     
     def login(self, email, password):
         """Authenticate with the server"""
@@ -417,6 +418,54 @@ class DesktopAgent(QSystemTrayIcon):
         else:
             # No saved credentials, show login window
             self.show_login_window()
+            
+    def send_heartbeat(self):
+        """Send heartbeat to server to confirm connection is still active"""
+        if self.api_client.connected:
+            try:
+                # Send heartbeat using the same trackConnection endpoint
+                # but with a special heartbeat event type
+                current_time = int(time.time())
+                formatted_time = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
+                
+                payload = {
+                    "event_type": "heartbeat",
+                    "ssid": NetworkMonitor.get_current_ssid(),
+                    "email": self.api_client.user_data['email'],
+                    "ip_address": NetworkMonitor.get_ip_address(),
+                    "mac_address": NetworkMonitor.get_mac_address(),
+                    "computer_name": NetworkMonitor.get_computer_name(),
+                    "heartbeat_time": current_time,
+                    "heartbeat_time_formatted": formatted_time
+                }
+                
+                # Send the heartbeat in a separate thread to avoid blocking the UI
+                threading.Thread(
+                    target=self._send_heartbeat_worker,
+                    args=(payload,)
+                ).start()
+            except Exception as e:
+                print(f"Error sending heartbeat: {str(e)}")
+                
+    def _send_heartbeat_worker(self, payload):
+        """Worker function to send heartbeat in a separate thread"""
+        try:
+            response = self.api_client.session.post(f"{API_BASE_URL}/track-connection", json=payload)
+            response_data = response.json()
+            
+            if response.status_code == 200 and response_data.get('success'):
+                # Update status (silently, no notification)
+                self.api_client.last_heartbeat_time = payload['heartbeat_time']
+                print(f"Heartbeat sent successfully at {payload['heartbeat_time_formatted']}")
+            else:
+                print(f"Heartbeat failed: {response_data.get('message', 'Unknown error')}")
+                
+                # If server cannot find the session, try to reconnect
+                if "No active session found" in response_data.get('message', ''):
+                    print("Session not found on server, attempting to reconnect...")
+                    self.handle_network_connect()
+        except Exception as e:
+            print(f"Error in heartbeat worker: {str(e)}")
     
     def show_login_window(self):
         """Show the login window"""
@@ -435,8 +484,13 @@ class DesktopAgent(QSystemTrayIcon):
         # Update initial status
         self.update_network_status()
         
-        # Start the timer
+        # Start the network timer
         self.network_timer.start(30000)  # Check every 30 seconds
+        
+        # Start heartbeat timer for status updates (every 2 minutes)
+        self.heartbeat_timer = QTimer(self)
+        self.heartbeat_timer.timeout.connect(self.send_heartbeat)
+        self.heartbeat_timer.start(120000)  # Send heartbeat every 2 minutes
     
     def check_network(self):
         """Check network status periodically"""

@@ -72,10 +72,25 @@ const getAttendanceHistory = async (params = {}) => {
   }
 };
 
+// Cleanup inactive sessions
+const cleanupInactiveSessions = async () => {
+  try {
+    const response = await API.post('/desktop/cleanup-inactive-sessions');
+    return response.data;
+  } catch (error) {
+    console.error('Error cleaning up inactive sessions:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Failed to clean up inactive sessions',
+    };
+  }
+};
+
 const desktopService = {
   getActiveSessions,
   resetMacAddress,
   getAttendanceHistory,
+  cleanupInactiveSessions,
 };
 
 export default desktopService;
