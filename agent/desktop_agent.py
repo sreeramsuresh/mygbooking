@@ -9,17 +9,10 @@ import threading
 import requests
 import configparser
 from datetime import datetime
-from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction, 
-                           QMainWindow, QLabel, QLineEdit, QPushButton, 
-                           QVBoxLayout, QWidget, QMessageBox, QHBoxLayout)
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 
 # Constants
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.office_agent_config')
-ICON_PATH = 'icon.png'  # Replace with your icon path or bundle it
 API_BASE_URL = 'http://localhost:9600/api/desktop'  # Replace with your server URL
-
 
 class NetworkMonitor:
     """Class to monitor network connection and get network details"""
@@ -197,6 +190,45 @@ class ApiClient:
                 return False, response_data.get('message', 'Tracking failed')
         except Exception as e:
             return False, f"Tracking error: {str(e)}"
+    
+    def send_heartbeat(self):
+        """Send heartbeat to server to confirm connection is still active"""
+        if not self.connected:
+            return False, "Not connected"
+            
+        try:
+            current_time = int(time.time())
+            formatted_time = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
+            
+            payload = {
+                "event_type": "heartbeat",
+                "ssid": NetworkMonitor.get_current_ssid(),
+                "email": self.user_data['email'],
+                "ip_address": NetworkMonitor.get_ip_address(),
+                "mac_address": NetworkMonitor.get_mac_address(),
+                "computer_name": NetworkMonitor.get_computer_name(),
+                "heartbeat_time": current_time,
+                "heartbeat_time_formatted": formatted_time
+            }
+            
+            response = self.session.post(f"{API_BASE_URL}/track-connection", json=payload)
+            response_data = response.json()
+            
+            if response.status_code == 200 and response_data.get('success'):
+                self.last_heartbeat_time = current_time
+                print(f"Heartbeat sent successfully at {formatted_time}")
+                return True, response_data['message']
+            else:
+                print(f"Heartbeat failed: {response_data.get('message', 'Unknown error')}")
+                
+                # If server cannot find the session, try to reconnect
+                if "No active session found" in response_data.get('message', ''):
+                    print("Session not found on server, attempting to reconnect...")
+                    return False, "Session not found"
+                
+                return False, response_data.get('message', 'Heartbeat failed')
+        except Exception as e:
+            return False, f"Heartbeat error: {str(e)}"
 
 
 class ConfigManager:
@@ -238,396 +270,147 @@ class ConfigManager:
             os.remove(CONFIG_FILE)
 
 
-class LoginWindow(QMainWindow):
-    """Login window for first-time authentication"""
-    login_successful = pyqtSignal(str, str)
+class OfficeAgent:
+    """Main agent class for monitoring network and tracking attendance"""
     
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Office Attendance - Login")
-        self.setFixedSize(350, 200)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        
-        main_widget = QWidget()
-        layout = QVBoxLayout()
-        
-        # Email field
-        email_layout = QHBoxLayout()
-        email_label = QLabel("Email:")
-        self.email_input = QLineEdit()
-        email_layout.addWidget(email_label)
-        email_layout.addWidget(self.email_input)
-        layout.addLayout(email_layout)
-        
-        # Password field
-        password_layout = QHBoxLayout()
-        password_label = QLabel("Password:")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.Password)
-        password_layout.addWidget(password_label)
-        password_layout.addWidget(self.password_input)
-        layout.addLayout(password_layout)
-        
-        # Login button
-        self.login_button = QPushButton("Login")
-        self.login_button.clicked.connect(self.perform_login)
-        layout.addWidget(self.login_button)
-        
-        # Status label
-        self.status_label = QLabel("")
-        layout.addWidget(self.status_label)
-        
-        main_widget.setLayout(layout)
-        self.setCentralWidget(main_widget)
-        
+    def __init__(self, email=None, password=None):
         # API client
         self.api_client = ApiClient()
         
-        # Center window on screen
-        self.center_on_screen()
-    
-    def center_on_screen(self):
-        """Center the window on the screen"""
-        qr = self.frameGeometry()
-        cp = QApplication.desktop().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-    
-    def perform_login(self):
-        """Handle login button click"""
-        email = self.email_input.text()
-        password = self.password_input.text()
-        
-        if not email or not password:
-            self.status_label.setText("Please enter both email and password")
-            return
-        
-        self.login_button.setEnabled(False)
-        self.status_label.setText("Logging in...")
-        
-        # Perform login in a separate thread to avoid UI freezing
-        threading.Thread(target=self._login_worker, args=(email, password)).start()
-    
-    def _login_worker(self, email, password):
-        """Worker function to perform login in a separate thread"""
-        success, message = self.api_client.login(email, password)
-        
-        # Update UI in the main thread
-        QApplication.instance().callEvent(
-            lambda: self._handle_login_result(success, message, email, password)
-        )
-    
-    def _handle_login_result(self, success, message, email, password):
-        """Handle login result"""
-        self.login_button.setEnabled(True)
-        
-        if success:
-            self.status_label.setText(f"Success: {message}")
-            # Save credentials
-            ConfigManager.save_credentials(email, password)
-            # Emit signal for successful login
-            self.login_successful.emit(email, password)
-            # Close login window
-            self.close()
-        else:
-            self.status_label.setText(f"Error: {message}")
-
-
-class DesktopAgent(QSystemTrayIcon):
-    """Main desktop agent class that manages the system tray icon and background operations"""
-    
-    def __init__(self):
-        super().__init__()
-        
-        # Setup tray icon
-        icon = QIcon(ICON_PATH) if os.path.exists(ICON_PATH) else QIcon.fromTheme("network-idle")
-        self.setIcon(icon)
-        self.setToolTip("Office Attendance Agent")
-        self.setVisible(True)
-        
-        # Create menu
-        self.menu = QMenu()
-        
-        # Status action (read-only)
-        self.status_action = QAction("Status: Not connected")
-        self.status_action.setEnabled(False)
-        self.menu.addAction(self.status_action)
-        
-        # Network action (read-only)
-        self.network_action = QAction("Network: Unknown")
-        self.network_action.setEnabled(False)
-        self.menu.addAction(self.network_action)
-        
-        self.menu.addSeparator()
-        
-        # Force connect action
-        self.connect_action = QAction("Connect Manually")
-        self.connect_action.triggered.connect(self.manual_connect)
-        self.menu.addAction(self.connect_action)
-        
-        # Force disconnect action
-        self.disconnect_action = QAction("Disconnect Manually")
-        self.disconnect_action.triggered.connect(self.manual_disconnect)
-        self.disconnect_action.setEnabled(False)
-        self.menu.addAction(self.disconnect_action)
-        
-        self.menu.addSeparator()
-        
-        # Logout action
-        self.logout_action = QAction("Logout")
-        self.logout_action.triggered.connect(self.logout)
-        self.menu.addAction(self.logout_action)
-        
-        # Exit action
-        self.exit_action = QAction("Exit")
-        self.exit_action.triggered.connect(self.exit_application)
-        self.menu.addAction(self.exit_action)
-        
-        # Set menu
-        self.setContextMenu(self.menu)
-        
-        # API client
-        self.api_client = ApiClient()
-        
-        # Timer for network checking
-        self.network_timer = QTimer(self)
-        self.network_timer.timeout.connect(self.check_network)
-        
-        # Get login credentials
-        self.email, self.password = ConfigManager.load_credentials()
-        
-        # Initialize login window
-        self.login_window = None
-        
-        # Start application
-        self.initialize()
-    
-    def initialize(self):
-        """Initialize the application"""
-        if self.email and self.password:
-            # Authenticate with saved credentials
-            success, message = self.api_client.login(self.email, self.password)
-            
-            if success:
-                self.show_notification("Office Attendance Agent", "Successfully logged in")
-                self.start_monitoring()
-            else:
-                # Failed with saved credentials, show login window
-                self.show_notification("Login Failed", message)
-                self.show_login_window()
-        else:
-            # No saved credentials, show login window
-            self.show_login_window()
-            
-    def send_heartbeat(self):
-        """Send heartbeat to server to confirm connection is still active"""
-        if self.api_client.connected:
-            try:
-                # Send heartbeat using the same trackConnection endpoint
-                # but with a special heartbeat event type
-                current_time = int(time.time())
-                formatted_time = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-                
-                payload = {
-                    "event_type": "heartbeat",
-                    "ssid": NetworkMonitor.get_current_ssid(),
-                    "email": self.api_client.user_data['email'],
-                    "ip_address": NetworkMonitor.get_ip_address(),
-                    "mac_address": NetworkMonitor.get_mac_address(),
-                    "computer_name": NetworkMonitor.get_computer_name(),
-                    "heartbeat_time": current_time,
-                    "heartbeat_time_formatted": formatted_time
-                }
-                
-                # Send the heartbeat in a separate thread to avoid blocking the UI
-                threading.Thread(
-                    target=self._send_heartbeat_worker,
-                    args=(payload,)
-                ).start()
-            except Exception as e:
-                print(f"Error sending heartbeat: {str(e)}")
-                
-    def _send_heartbeat_worker(self, payload):
-        """Worker function to send heartbeat in a separate thread"""
-        try:
-            response = self.api_client.session.post(f"{API_BASE_URL}/track-connection", json=payload)
-            response_data = response.json()
-            
-            if response.status_code == 200 and response_data.get('success'):
-                # Update status (silently, no notification)
-                self.api_client.last_heartbeat_time = payload['heartbeat_time']
-                print(f"Heartbeat sent successfully at {payload['heartbeat_time_formatted']}")
-            else:
-                print(f"Heartbeat failed: {response_data.get('message', 'Unknown error')}")
-                
-                # If server cannot find the session, try to reconnect
-                if "No active session found" in response_data.get('message', ''):
-                    print("Session not found on server, attempting to reconnect...")
-                    self.handle_network_connect()
-        except Exception as e:
-            print(f"Error in heartbeat worker: {str(e)}")
-    
-    def show_login_window(self):
-        """Show the login window"""
-        self.login_window = LoginWindow()
-        self.login_window.login_successful.connect(self.on_login_successful)
-        self.login_window.show()
-    
-    def on_login_successful(self, email, password):
-        """Handle successful login from login window"""
+        # Store credentials
         self.email = email
         self.password = password
-        self.start_monitoring()
-    
-    def start_monitoring(self):
-        """Start network monitoring"""
-        # Update initial status
-        self.update_network_status()
         
-        # Start the network timer
-        self.network_timer.start(30000)  # Check every 30 seconds
+        # Current status
+        self.is_running = False
+        self.previous_ssid = "Unknown"
         
-        # Start heartbeat timer for status updates (every 2 minutes)
-        self.heartbeat_timer = QTimer(self)
-        self.heartbeat_timer.timeout.connect(self.send_heartbeat)
-        self.heartbeat_timer.start(120000)  # Send heartbeat every 2 minutes
+    def initialize(self):
+        """Initialize the agent"""
+        # If no credentials provided, try to load from config
+        if not self.email or not self.password:
+            self.email, self.password = ConfigManager.load_credentials()
+        
+        # If still no credentials, prompt for them
+        if not self.email or not self.password:
+            self.email = input("Enter your email: ")
+            self.password = getpass.getpass("Enter your password: ")
+        
+        # Authenticate
+        success, message = self.api_client.login(self.email, self.password)
+        
+        if success:
+            print(f"Successfully logged in: {message}")
+            # Save credentials for next time
+            ConfigManager.save_credentials(self.email, self.password)
+            return True
+        else:
+            print(f"Login failed: {message}")
+            return False
     
     def check_network(self):
-        """Check network status periodically"""
+        """Check network status and handle connections/disconnections"""
         current_ssid = NetworkMonitor.get_current_ssid()
         
-        # Update status display
-        self.update_network_status()
+        # Print current status
+        print(f"Current network: {current_ssid}")
         
-        # If connected to network, but not logged in, perform connect
-        if current_ssid != "Unknown" and not self.api_client.connected:
-            self.handle_network_connect()
+        # Handle connections
+        if current_ssid != "Unknown" and self.previous_ssid == "Unknown":
+            success, message = self.api_client.track_connection(is_connect=True)
+            if success:
+                print(f"Connected to {current_ssid}: {message}")
+            else:
+                print(f"Connection tracking failed: {message}")
         
-        # If disconnected from network but still logged in, perform disconnect
-        elif current_ssid == "Unknown" and self.api_client.connected:
-            self.handle_network_disconnect()
+        # Handle disconnections
+        elif current_ssid == "Unknown" and self.previous_ssid != "Unknown":
+            success, message = self.api_client.track_connection(is_connect=False)
+            if success:
+                print(f"Disconnected from {self.previous_ssid}: {message}")
+            else:
+                print(f"Disconnection tracking failed: {message}")
+        
+        # Update previous SSID
+        self.previous_ssid = current_ssid
     
-    def update_network_status(self):
-        """Update network status in the menu"""
-        current_ssid = NetworkMonitor.get_current_ssid()
+    def run(self):
+        """Run the agent in a loop"""
+        if not self.initialize():
+            print("Failed to initialize. Exiting.")
+            return
         
-        # Update network action
-        self.network_action.setText(f"Network: {current_ssid}")
+        self.is_running = True
+        heartbeat_counter = 0
         
-        # Update status action
-        status = "Connected" if self.api_client.connected else "Not connected"
-        self.status_action.setText(f"Status: {status}")
+        # Set up signal handling for proper termination
+        import signal
         
-        # Update icon based on connection status
+        def signal_handler(sig, frame):
+            print("\nStopping Office Agent...")
+            self.stop()
+            sys.exit(0)
+        
+        # Register the signal handler for SIGINT (Ctrl+C)
+        signal.signal(signal.SIGINT, signal_handler)
+        
+        print("Office Agent is running. Press Ctrl+C to exit.")
+        
+        # Initial network check
+        self.check_network()
+        
+        try:
+            while self.is_running:
+                # Use shorter sleep intervals to check for interruption more frequently
+                for _ in range(6):  # 6 x 5 seconds = 30 seconds
+                    time.sleep(5)
+                    if not self.is_running:
+                        break
+                        
+                if not self.is_running:
+                    break
+                
+                # Check network
+                self.check_network()
+                
+                # Send heartbeat every 2 minutes (4 cycles)
+                heartbeat_counter += 1
+                if heartbeat_counter >= 4:
+                    if self.api_client.connected:
+                        success, message = self.api_client.send_heartbeat()
+                        if not success and message == "Session not found":
+                            # Force reconnect
+                            self.api_client.track_connection(is_connect=True)
+                    
+                    heartbeat_counter = 0
+                
+        except KeyboardInterrupt:
+            print("\nStopping Office Agent via KeyboardInterrupt...")
+            self.stop()
+    
+    def stop(self):
+        """Properly stop the agent"""
+        self.is_running = False
+        
+        # Disconnect if connected
         if self.api_client.connected:
-            icon = QIcon(ICON_PATH) if os.path.exists(ICON_PATH) else QIcon.fromTheme("network-transmit-receive")
-            self.setIcon(icon)
-        else:
-            icon = QIcon(ICON_PATH) if os.path.exists(ICON_PATH) else QIcon.fromTheme("network-idle")
-            self.setIcon(icon)
-        
-        # Update connect/disconnect actions
-        self.connect_action.setEnabled(not self.api_client.connected)
-        self.disconnect_action.setEnabled(self.api_client.connected)
-    
-    def handle_network_connect(self):
-        """Handle network connection"""
-        success, message = self.api_client.track_connection(is_connect=True)
-        
-        if success:
-            self.show_notification("Connected", f"Connected to {NetworkMonitor.get_current_ssid()}")
-        else:
-            self.show_notification("Connection Error", message)
-        
-        self.update_network_status()
-    
-    def handle_network_disconnect(self):
-        """Handle network disconnection"""
-        success, message = self.api_client.track_connection(is_connect=False)
-        
-        if success:
-            self.show_notification("Disconnected", "Disconnected from network")
-        else:
-            self.show_notification("Disconnection Error", message)
-        
-        self.update_network_status()
-    
-    def manual_connect(self):
-        """Manual connection triggered by user"""
-        self.handle_network_connect()
-    
-    def manual_disconnect(self):
-        """Manual disconnection triggered by user"""
-        self.handle_network_disconnect()
-    
-    def logout(self):
-        """Logout from the system"""
-        # First disconnect if connected
-        if self.api_client.connected:
-            self.handle_network_disconnect()
-        
-        # Then logout
+            success, message = self.api_client.track_connection(is_connect=False)
+            if success:
+                print(f"Disconnected: {message}")
+            else:
+                print(f"Failed to disconnect: {message}")
+            
+        # Logout
         success, message = self.api_client.logout()
-        
         if success:
-            # Clear saved credentials
-            ConfigManager.clear_credentials()
-            self.show_notification("Logged Out", "Successfully logged out")
-            # Show login window
-            self.show_login_window()
+            print(f"Logged out: {message}")
         else:
-            self.show_notification("Logout Error", message)
-    
-    def exit_application(self):
-        """Exit the application"""
-        # First disconnect if connected
-        if self.api_client.connected:
-            self.handle_network_disconnect()
+            print(f"Failed to logout: {message}")
         
-        # Then logout
-        if self.api_client.access_token:
-            self.api_client.logout()
-        
-        # Exit application
-        QApplication.quit()
-    
-    def show_notification(self, title, message):
-        """Show a system notification"""
-        self.showMessage(title, message, QSystemTrayIcon.Information, 3000)
-
-
-# Add an event call function to QApplication to handle threading
-class Application(QApplication):
-    def __init__(self, argv):
-        super().__init__(argv)
-        self._callbacks = {}
-        
-        # Call callbacks every 100ms
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._process_callbacks)
-        self.timer.start(100)
-    
-    def callEvent(self, callback):
-        """Call a function in the main thread"""
-        callback_id = id(callback)
-        self._callbacks[callback_id] = callback
-        return callback_id
-    
-    def _process_callbacks(self):
-        """Process all registered callbacks"""
-        callbacks = list(self._callbacks.items())
-        for callback_id, callback in callbacks:
-            callback()
-            del self._callbacks[callback_id]
+        print("Office Agent stopped.")
 
 
 if __name__ == "__main__":
-    # Create application
-    app = Application(sys.argv)
-    app.setQuitOnLastWindowClosed(False)  # Keep running when windows are closed
-    
-    # Create tray icon
-    tray_icon = DesktopAgent()
-    
-    # Start the application event loop
-    sys.exit(app.exec_())
+    # Create and run the agent
+    agent = OfficeAgent()
+    agent.run()

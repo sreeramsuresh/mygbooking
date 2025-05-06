@@ -76,6 +76,51 @@ const dashboardService = {
       throw error;
     }
   },
+
+  // Get today's attendance records
+  getTodayAttendance: async (date) => {
+    try {
+      const response = await axios.get(`${API_ENDPOINT}/attendance`, {
+        params: { date }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      return { success: false, message: error.message };
+    }
+  },
+
+  // Get weekly attendance report
+  getWeeklyAttendanceReport: async (weekNumber, year) => {
+    try {
+      const response = await axios.get(`${API_ENDPOINT}/attendance/weekly`, {
+        params: { weekNumber, year }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      return { success: false, message: error.message };
+    }
+  },
+
+  // Get monthly attendance report
+  getMonthlyAttendanceReport: async (month, year) => {
+    try {
+      const response = await axios.get(`${API_ENDPOINT}/attendance/monthly`, {
+        params: { month, year }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        return error.response.data;
+      }
+      return { success: false, message: error.message };
+    }
+  },
 };
 
 export default dashboardService;

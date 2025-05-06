@@ -20,6 +20,10 @@ import {
   TableHead,
   TableRow,
   Tooltip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -44,6 +48,10 @@ import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import ComputerIcon from "@mui/icons-material/Computer";
+import PersonIcon from "@mui/icons-material/Person";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 import dashboardService from "../../services/dashboardService";
 import bookingService from "../../services/bookingService";
@@ -62,6 +70,7 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { format } from "date-fns";
 
 const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -77,6 +86,7 @@ const AdminDashboard = () => {
   const [resetError, setResetError] = useState("");
   const [resetResult, setResetResult] = useState(null);
   const [userList, setUserList] = useState([]);
+  const [todayAttendanceList, setTodayAttendanceList] = useState([]);
 
   const fetchDashboard = async () => {
     try {
@@ -87,6 +97,9 @@ const AdminDashboard = () => {
 
       if (response.success) {
         setDashboardData(response.data);
+        
+        // Also fetch today's attendance details
+        fetchTodayAttendance();
       } else {
         setError(response.message || "Failed to load dashboard data");
       }
@@ -95,6 +108,22 @@ const AdminDashboard = () => {
       console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTodayAttendance = async () => {
+    try {
+      // Get today's date
+      const today = new Date().toISOString().split('T')[0];
+      
+      // This will need a new API endpoint in your backend
+      const response = await dashboardService.getTodayAttendance(today);
+      
+      if (response.success) {
+        setTodayAttendanceList(response.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching today's attendance:", err);
     }
   };
 
@@ -408,37 +437,6 @@ const AdminDashboard = () => {
           </Card>
         </Grid>
 
-        {/* <Grid item xs={12} sm={6} lg={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <Box
-                  sx={{
-                    backgroundColor: "secondary.light",
-                    borderRadius: "50%",
-                    p: 1,
-                    mr: 2,
-                  }}
-                >
-                  <ComputerIcon />
-                </Box>
-                <Typography variant="h6">Desktop Sessions</Typography>
-              </Box>
-              <Typography variant="h3" align="center" sx={{ my: 2 }}>
-                {desktopSessions?.activeSessions || 0}
-              </Typography>
-              <Button
-                fullWidth
-                variant="outlined"
-                component={RouterLink}
-                to="/admin/desktop-sessions"
-              >
-                View Connected Users
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid> */}
-
         {/* Weekly Trend Chart */}
         <Grid item xs={12} lg={8}>
           <Card sx={{ height: "100%" }}>
@@ -517,68 +515,92 @@ const AdminDashboard = () => {
           </Card>
         </Grid>
 
-        {/* Today's Seat Utilization */}
-        <Grid item xs={12} sm={6} lg={6}>
+        {/* Today's Attendance List */}
+        <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Today's Seat Utilization
-              </Typography>
-              <Box
-                sx={{ height: 250, display: "flex", justifyContent: "center" }}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={seatData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      <Cell fill="#0088FE" />
-                      <Cell fill="#00C49F" />
-                    </Pie>
-                    <ChartTooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Typography variant="h6">Today's Attendance</Typography>
+                <Tooltip title="Refresh attendance data">
+                  <IconButton size="small" onClick={fetchTodayAttendance}>
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Day-wise Attendance */}
-        <Grid item xs={12} sm={6} lg={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Day-wise Attendance
-              </Typography>
-              <Box sx={{ height: 250 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={weeklyTrend}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              <Divider sx={{ mb: 2 }} />
+              
+              {todayAttendanceList.length > 0 ? (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Employee</TableCell>
+                        <TableCell>Department</TableCell>
+                        <TableCell>Check-in Time</TableCell>
+                        <TableCell>Network</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {todayAttendanceList.slice(0, 10).map((attendance) => (
+                        <TableRow key={attendance.id}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <PersonIcon sx={{ mr: 1, fontSize: 'small', color: 'primary.main' }} />
+                              <Box>
+                                <Typography variant="body2">{attendance.user?.fullName || 'Unknown'}</Typography>
+                                <Typography variant="caption" color="text.secondary">{attendance.user?.email}</Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{attendance.user?.department || 'N/A'}</TableCell>
+                          <TableCell>
+                            {attendance.checkInTime ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <AccessTimeIcon sx={{ mr: 1, fontSize: 'small', color: 'success.main' }} />
+                                {format(new Date(attendance.checkInTime), 'h:mm a')}
+                              </Box>
+                            ) : 'Not checked in'}
+                          </TableCell>
+                          <TableCell>{attendance.network || 'Unknown'}</TableCell>
+                          <TableCell>
+                            {attendance.isOfficeNetwork ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <CheckCircleIcon sx={{ mr: 1, fontSize: 'small', color: 'success.main' }} />
+                                Office Network
+                              </Box>
+                            ) : (
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <CancelIcon sx={{ mr: 1, fontSize: 'small', color: 'warning.main' }} />
+                                External Network
+                              </Box>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ py: 4, textAlign: 'center' }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No attendance records for today yet
+                  </Typography>
+                </Box>
+              )}
+              
+              {todayAttendanceList.length > 10 && (
+                <Box sx={{ mt: 2, textAlign: 'right' }}>
+                  <Button 
+                    variant="text" 
+                    component={RouterLink} 
+                    to="/admin/reports" 
+                    size="small"
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <ChartTooltip />
-                    <Legend />
-                    <Bar
-                      dataKey="attendance"
-                      name="Attendance"
-                      fill="#82ca9d"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
+                    View all attendance records
+                  </Button>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
