@@ -648,13 +648,18 @@ const Users = () => {
 
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth margin="normal">
-                  <InputLabel>Manager (Optional)</InputLabel>
+                  <InputLabel shrink htmlFor="managerId">
+                    Manager (Optional)
+                  </InputLabel>
                   <Select
                     name="managerId"
                     value={userForm.managerId}
                     onChange={handleUserFormChange}
                     label="Manager (Optional)"
                     displayEmpty
+                    inputProps={{
+                      id: "managerId",
+                    }}
                   >
                     <MenuItem value="">
                       <em>None</em>

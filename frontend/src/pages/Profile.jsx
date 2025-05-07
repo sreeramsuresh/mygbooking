@@ -151,7 +151,7 @@ const Profile = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+    <Box maxWidth="lg" sx={{ mt: 4, px: 3 }}>
       <Typography variant="h4" gutterBottom>
         My Profile
       </Typography>
@@ -253,6 +253,7 @@ const Profile = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField
+                    sx={{ height: "40px" }}
                     fullWidth
                     label="Full Name"
                     name="fullName"
@@ -265,6 +266,7 @@ const Profile = () => {
 
                 <Grid item xs={12} sm={6}>
                   <TextField
+                    sx={{ height: "40px" }}
                     fullWidth
                     label="Email"
                     name="email"
@@ -278,6 +280,7 @@ const Profile = () => {
 
                 <Grid item xs={12} sm={6}>
                   <TextField
+                    sx={{ height: "40px" }}
                     fullWidth
                     label="Department"
                     name="department"
@@ -293,6 +296,7 @@ const Profile = () => {
                       Default Work Days
                     </InputLabel>
                     <Select
+                      sx={{ height: "70px" }}
                       labelId="work-days-label"
                       multiple
                       value={formData.defaultWorkDays}
@@ -333,6 +337,7 @@ const Profile = () => {
 
                 <Grid item xs={12} sm={6}>
                   <TextField
+                    sx={{ height: "70px" }}
                     fullWidth
                     label="Required Office Days Per Week"
                     name="requiredDaysPerWeek"
@@ -345,9 +350,7 @@ const Profile = () => {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}
-                  >
+                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                     <Button
                       type="submit"
                       variant="contained"
@@ -373,6 +376,7 @@ const Profile = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField
+                    sx={{ height: "40px" }}
                     fullWidth
                     label="Current Password"
                     name="currentPassword"
@@ -445,7 +449,7 @@ const Profile = () => {
           </Paper>
         </Grid>
       </Grid>
-    </Container>
+    </Box>
   );
 };
 

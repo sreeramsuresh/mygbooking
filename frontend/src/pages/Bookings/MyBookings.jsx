@@ -527,16 +527,20 @@ const MyBookings = () => {
         </Box>
       </Box>
 
-      <Paper sx={{ mb: 3 }}>
+      <Paper sx={{ mb: 3, overflow: "hidden" }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           aria-label="booking status tabs"
-          sx={{ borderBottom: 1, borderColor: "divider" }}
+          sx={{
+            borderBottom: 1,
+            borderColor: "divider",
+            paddingBottom: 0, // Remove any padding below the tabs
+          }}
         >
-          <Tab label="Upcoming" />
-          <Tab label="Past" />
-          <Tab label="Cancelled" />
+          <Tab label="Upcoming" sx={{ paddingBottom: 0 }} />
+          <Tab label="Past" sx={{ paddingBottom: 0 }} />
+          <Tab label="Cancelled" sx={{ paddingBottom: 0 }} />
         </Tabs>
       </Paper>
 
