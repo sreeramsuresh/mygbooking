@@ -4,3 +4,5 @@ dist
 backend/logs/combined.log
 backend/logs/error.log
 desktopagent
+build
+dist
