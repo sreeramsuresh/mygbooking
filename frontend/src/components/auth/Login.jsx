@@ -9,18 +9,28 @@ import {
   Container,
   Alert,
   CircularProgress,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useNavigate, Link } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
 const Login = () => {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login: authLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,14 +60,42 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8, mb: 4 }}>
+    <Container
+      maxWidth="sm"
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Box sx={{ width: "100%" }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
+          <Box sx={logoText}>
+            <Typography component="span" sx={gigText}>
+              Gig
+            </Typography>
+            <Typography component="span" sx={labzText}>
+              Labz
+            </Typography>
+          </Box>
+          <Typography
+            component="h1"
+            variant="h5"
+            align="center"
+            gutterBottom
+            sx={{ color: "#666666" }}
+          >
             Office Attendance Tracker
           </Typography>
 
-          <Typography component="h2" variant="h5" align="center" gutterBottom>
+          <Typography
+            component="h2"
+            variant="h6"
+            align="center"
+            gutterBottom
+            sx={{ color: "#666666" }}
+          >
             Sign In
           </Typography>
 
@@ -88,12 +126,26 @@ const Login = () => {
               fullWidth
               name="password"
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               id="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isSubmitting}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      onMouseDown={handleMouseDownPassword}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
 
             <Button
@@ -113,3 +165,23 @@ const Login = () => {
 };
 
 export default Login;
+
+const logoText = {
+  fontWeight: 700,
+  fontSize: "2rem",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const gigText = {
+  color: "#2563eb",
+  fontWeight: "700",
+  fontSize: "2.5rem",
+};
+
+const labzText = {
+  color: "#f59e0b",
+  fontWeight: "700",
+  fontSize: "2.5rem",
+};

@@ -3,3 +3,6 @@ frontend/node_modules/
 dist
 backend/logs/combined.log
 backend/logs/error.log
+desktopagent
+build
+dist

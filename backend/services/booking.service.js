@@ -69,12 +69,9 @@ const createBooking = async (userId, seatId, bookingDate, performedBy) => {
       },
     });
 
-    // Check if user is exceeding their required days per week
-    if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-      throw new Error(
-        `You have already booked your required ${user.requiredDaysPerWeek} days for this week. Cancel an existing booking if you want to book a different day.`
-      );
-    }
+    // No longer check if user is exceeding their required days per week
+    // This allows users to book extra days beyond their required minimum
+    // Comment: Previously restricted users to their requiredDaysPerWeek, now they can book additional days
 
     // Create the booking
     const booking = await Booking.create({
@@ -159,12 +156,8 @@ const updateBooking = async (bookingId, updates, performedBy) => {
             },
           });
 
-          // Check if user is exceeding their required days per week
-          if (existingWeeklyBookings >= user.requiredDaysPerWeek) {
-            throw new Error(
-              `You have already booked your required ${user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
-            );
-          }
+          // No longer check if user is exceeding their required days per week
+          // This allows users to book extra days beyond their required minimum
         }
       }
     }
@@ -252,7 +245,7 @@ const cancelBooking = async (bookingId, reason, performedBy) => {
 /**
  * Changes an auto-booked day to another day within user's preferences
  */
-const changeWorkDay = async (bookingId, newDate, performedBy) => {
+const changeWorkDay = async (bookingId, newDate, performedBy, seatId = null) => {
   try {
     const booking = await Booking.findByPk(bookingId, {
       include: [
@@ -305,30 +298,45 @@ const changeWorkDay = async (bookingId, newDate, performedBy) => {
         },
       });
 
-      // Check if user is exceeding their required days per week
-      if (existingWeeklyBookings >= booking.user.requiredDaysPerWeek) {
-        throw new Error(
-          `You have already booked your required ${booking.user.requiredDaysPerWeek} days for the selected week. Cancel an existing booking if you want to book a different day.`
-        );
+      // No longer check if user is exceeding their required days per week
+      // This allows users to book extra days beyond their required minimum
+    }
+    
+    // Determine the seat ID to use
+    let finalSeatId = booking.seatId; // Default to current seat
+    let seatChanged = false;
+    
+    // If a new seat ID is provided, use that
+    if (seatId) {
+      finalSeatId = seatId;
+      seatChanged = true;
+    } else {
+      // If no seat ID provided, check if the current seat is available
+      const existingSeatBooking = await Booking.findOne({
+        where: {
+          seatId: booking.seatId,
+          bookingDate: newDate,
+          status: { [Op.ne]: "cancelled" },
+        },
+      });
+      
+      // If the seat is already booked, throw an error
+      if (existingSeatBooking) {
+        throw new Error("Your current seat is already booked for the selected date. Please select a new seat.");
       }
     }
     
-    // Check if any user has booked this user's current seat on the new date
-    const existingSeatBooking = await Booking.findOne({
-      where: {
-        seatId: booking.seatId,
-        bookingDate: newDate,
-        status: { [Op.ne]: "cancelled" },
-      },
-    });
-
-    // Update booking with new date and week number
+    // Update booking with new date, week number, and seat ID if changed
     const updates = {
       bookingDate: newDate,
       weekNumber: newWeekNumber,
-      // If the seat is already taken for the new date, we'll need to put this booking in pending state
-      status: existingSeatBooking ? "pending" : "confirmed"
+      status: "confirmed" // Always set to confirmed
     };
+    
+    // Add seat ID to updates if it changed
+    if (seatChanged) {
+      updates.seatId = finalSeatId;
+    }
     
     await booking.update(updates);
 
@@ -344,10 +352,7 @@ const changeWorkDay = async (bookingId, newDate, performedBy) => {
 
     return {
       ...booking.dataValues,
-      needsSeatSelection: !!existingSeatBooking,
-      message: existingSeatBooking ? 
-        "Your preferred seat is already booked for the selected date. Please select a new seat." : 
-        "Workday changed successfully."
+      message: "Workday changed successfully."
     };
   } catch (error) {
     throw error;

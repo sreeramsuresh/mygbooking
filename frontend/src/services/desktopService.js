@@ -58,9 +58,39 @@ const resetMacAddress = async (userData) => {
   }
 };
 
+// Get attendance history
+const getAttendanceHistory = async (params = {}) => {
+  try {
+    const response = await API.get('/desktop/attendance-history', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching attendance history:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Failed to fetch attendance history',
+    };
+  }
+};
+
+// Cleanup inactive sessions
+const cleanupInactiveSessions = async () => {
+  try {
+    const response = await API.post('/desktop/cleanup-inactive-sessions');
+    return response.data;
+  } catch (error) {
+    console.error('Error cleaning up inactive sessions:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Failed to clean up inactive sessions',
+    };
+  }
+};
+
 const desktopService = {
   getActiveSessions,
   resetMacAddress,
+  getAttendanceHistory,
+  cleanupInactiveSessions,
 };
 
 export default desktopService;

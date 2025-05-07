@@ -167,6 +167,74 @@ async function processAutoBookingsForAllUsers() {
 }
 
 function initScheduler() {
+  // Cancel bookings for users who haven't checked in by 10:30 AM
+  cron.schedule("30 10 * * 1-5", async () => {
+    logger.info("Running booking cancellation for users who haven't checked in");
+    
+    try {
+      // Get current date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Find all bookings for today that haven't been checked in
+      const db = require("../db/models");
+      const Booking = db.booking;
+      const User = db.user;
+      const Seat = db.seat;
+      
+      const uncheckedBookings = await Booking.findAll({
+        where: {
+          bookingDate: today,
+          status: 'confirmed',
+          checkInTime: null
+        },
+        include: [
+          {
+            model: User,
+            attributes: ['id', 'username', 'email', 'fullName']
+          },
+          {
+            model: Seat,
+            attributes: ['id', 'seatNumber']
+          }
+        ]
+      });
+      
+      logger.info(`Found ${uncheckedBookings.length} bookings without check-in by 10:30 AM`);
+      
+      // Cancel these bookings
+      let cancelledCount = 0;
+      for (const booking of uncheckedBookings) {
+        try {
+          await booking.update({
+            status: 'cancelled'
+          });
+          
+          // Log the cancellation
+          await db.auditLog.create({
+            entityType: "booking",
+            entityId: booking.id,
+            action: "cancel",
+            performedBy: null, // System performed
+            oldValues: { status: 'confirmed' },
+            newValues: {
+              status: "cancelled",
+              reason: "No check-in by 10:30 AM",
+            },
+          });
+          
+          cancelledCount++;
+          logger.info(`Cancelled booking #${booking.id} for user ${booking.user?.username || booking.userId} (Seat ${booking.seat?.seatNumber || booking.seatId})`);
+        } catch (cancelError) {
+          logger.error(`Error cancelling booking #${booking.id}:`, cancelError);
+        }
+      }
+      
+      logger.info(`Successfully cancelled ${cancelledCount} bookings due to no check-in by 10:30 AM`);
+    } catch (error) {
+      logger.error("Booking cancellation job failed:", error);
+    }
+  });
+  
   // Run weekly auto-booking every Sunday at midnight
   cron.schedule("0 0 * * 0", async () => {
     logger.info("Running weekly auto-booking job");

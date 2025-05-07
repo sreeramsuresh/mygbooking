@@ -257,7 +257,7 @@ const Reports = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container sx={{ mt: 4, mb: 8 }}>
+      <Box sx={{ mt: 4, mb: 8, px: 3 }}>
         {/* Breadcrumbs Navigation */}
         <Breadcrumbs
           separator={<NavigateNextIcon fontSize="small" />}
@@ -525,7 +525,7 @@ const Reports = () => {
             )}
           </>
         )}
-      </Container>
+      </Box>
     </LocalizationProvider>
   );
 };

@@ -1,5 +1,5 @@
 // frontend/src/components/common/Sidebar.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   Drawer,
   List,
@@ -11,6 +11,8 @@ import {
   Box,
   useTheme,
   useMediaQuery,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -23,7 +25,9 @@ import {
   FormatListBulleted as RequestsIcon,
   Settings as SettingsIcon,
   AutoAwesome as AutoBookingIcon,
-  Computer as ComputerIcon
+  Computer as ComputerIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
@@ -34,12 +38,17 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   const location = useLocation();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleNavigation = (path) => {
     navigate(path);
     if (!isDesktop) {
       onMobileClose();
     }
+  };
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   const isActive = (path) => {
@@ -59,14 +68,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
       path: "/profile",
     },
   ];
-  
+
   // Menu items for regular employees and managers (not admins)
   const employeeMenuItems = [
-    {
-      text: "New Booking",
-      icon: <CalendarIcon />,
-      path: "/bookings/new",
-    },
     {
       text: "My Bookings",
       icon: <EventIcon />,
@@ -112,120 +116,81 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     },
   ];
 
+  const ListItemComponent = ({ item }) => (
+    <Tooltip title={isCollapsed ? item.text : ""} placement="right" arrow>
+      <ListItem
+        button
+        onClick={() => handleNavigation(item.path)}
+        selected={isActive(item.path)}
+        sx={{
+          "&.Mui-selected": {
+            backgroundColor: theme.palette.primary.light,
+            color: theme.palette.primary.contrastText,
+            "& .MuiListItemIcon-root": {
+              color: theme.palette.primary.contrastText,
+            },
+            "&:hover": {
+              backgroundColor: theme.palette.primary.main,
+            },
+          },
+          borderRadius: 1,
+          my: 0.5,
+          mx: 1,
+          minHeight: 48,
+          justifyContent: isCollapsed ? "center" : "initial",
+        }}
+      >
+        <ListItemIcon
+          sx={{
+            color: isActive(item.path)
+              ? theme.palette.primary.contrastText
+              : "inherit",
+            minWidth: isCollapsed ? 0 : 40,
+            mr: isCollapsed ? 0 : 2,
+            justifyContent: "center",
+          }}
+        >
+          {item.icon}
+        </ListItemIcon>
+        {!isCollapsed && <ListItemText primary={item.text} />}
+      </ListItem>
+    </Tooltip>
+  );
+
   const drawerContent = (
     <div>
-      <Toolbar />
+      <Toolbar
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          px: [1],
+          pt: 10, // Added margin top
+        }}
+      >
+        <IconButton onClick={toggleCollapse}>
+          {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </IconButton>
+      </Toolbar>
       <Divider />
       <List>
         {/* Common menu items */}
         {commonMenuItems.map((item) => (
-          <ListItem
-            button
-            key={item.text}
-            onClick={() => handleNavigation(item.path)}
-            selected={isActive(item.path)}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: theme.palette.primary.light,
-                color: theme.palette.primary.contrastText,
-                "& .MuiListItemIcon-root": {
-                  color: theme.palette.primary.contrastText,
-                },
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              },
-              borderRadius: 1,
-              my: 0.5,
-              mx: 1,
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                color: isActive(item.path)
-                  ? theme.palette.primary.contrastText
-                  : "inherit",
-              }}
-            >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItem>
+          <ListItemComponent key={item.text} item={item} />
         ))}
-        
-        {/* Employee-specific menu items (not for admins) */}
-        {!isAdmin && employeeMenuItems.map((item) => (
-          <ListItem
-            button
-            key={item.text}
-            onClick={() => handleNavigation(item.path)}
-            selected={isActive(item.path)}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: theme.palette.primary.light,
-                color: theme.palette.primary.contrastText,
-                "& .MuiListItemIcon-root": {
-                  color: theme.palette.primary.contrastText,
-                },
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              },
-              borderRadius: 1,
-              my: 0.5,
-              mx: 1,
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                color: isActive(item.path)
-                  ? theme.palette.primary.contrastText
-                  : "inherit",
-              }}
-            >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItem>
-        ))}
+
+        {/* Employee-specific menu items */}
+        {!isAdmin &&
+          employeeMenuItems.map((item) => (
+            <ListItemComponent key={item.text} item={item} />
+          ))}
 
         {/* Managers and Admin items */}
         {(isManager || isAdmin) && (
           <>
             <Divider sx={{ my: 2 }} />
             {managerMenuItems.map((item) => (
-              <ListItem
-                button
-                key={item.text}
-                onClick={() => handleNavigation(item.path)}
-                selected={isActive(item.path)}
-                sx={{
-                  "&.Mui-selected": {
-                    backgroundColor: theme.palette.primary.light,
-                    color: theme.palette.primary.contrastText,
-                    "& .MuiListItemIcon-root": {
-                      color: theme.palette.primary.contrastText,
-                    },
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.main,
-                    },
-                  },
-                  borderRadius: 1,
-                  my: 0.5,
-                  mx: 1,
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    color: isActive(item.path)
-                      ? theme.palette.primary.contrastText
-                      : "inherit",
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItem>
+              <ListItemComponent key={item.text} item={item} />
             ))}
           </>
         )}
@@ -235,38 +200,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           <>
             <Divider sx={{ my: 2 }} />
             {adminMenuItems.map((item) => (
-              <ListItem
-                button
-                key={item.text}
-                onClick={() => handleNavigation(item.path)}
-                selected={isActive(item.path)}
-                sx={{
-                  "&.Mui-selected": {
-                    backgroundColor: theme.palette.primary.light,
-                    color: theme.palette.primary.contrastText,
-                    "& .MuiListItemIcon-root": {
-                      color: theme.palette.primary.contrastText,
-                    },
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.main,
-                    },
-                  },
-                  borderRadius: 1,
-                  my: 0.5,
-                  mx: 1,
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    color: isActive(item.path)
-                      ? theme.palette.primary.contrastText
-                      : "inherit",
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItem>
+              <ListItemComponent key={item.text} item={item} />
             ))}
           </>
         )}
@@ -277,7 +211,14 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
   return (
     <Box
       component="nav"
-      sx={{ width: { md: 240 }, flexShrink: { md: 0 } }}
+      sx={{
+        width: { md: isCollapsed ? 73 : 240 },
+        flexShrink: { md: 0 },
+        transition: theme.transitions.create("width", {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.enteringScreen,
+        }),
+      }}
       aria-label="mailbox folders"
     >
       {/* Mobile drawer */}
@@ -286,7 +227,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         open={isMobileOpen}
         onClose={onMobileClose}
         ModalProps={{
-          keepMounted: true, // Better open performance on mobile
+          keepMounted: true,
         }}
         sx={{
           display: { xs: "block", md: "none" },
@@ -306,7 +247,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
           display: { xs: "none", md: "block" },
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
-            width: 240,
+            overflowX: "hidden",
+            width: isCollapsed ? 73 : 240,
+            transition: theme.transitions.create("width", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
           },
         }}
         open

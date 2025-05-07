@@ -29,4 +29,16 @@ router.get(
   controller.getActiveSessions
 );
 
+router.get(
+  "/attendance-history",
+  [authJwt.verifyToken, authJwt.isAdmin],
+  controller.getAttendanceHistory
+);
+
+router.post(
+  "/cleanup-inactive-sessions",
+  [authJwt.verifyToken, authJwt.isAdmin],
+  controller.cleanupInactiveSessions
+);
+
 module.exports = router;
