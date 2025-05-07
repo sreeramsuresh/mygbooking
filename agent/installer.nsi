@@ -2,6 +2,7 @@
 ; Office Agent Installer Script
 
 !include "MUI2.nsh"
+!include "LogicLib.nsh"
 ; FileFunc.nsh not used in this script
 
 ; Define variables
@@ -29,6 +30,10 @@ ShowUnInstDetails show
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+; Finish page options
+!define MUI_FINISHPAGE_RUN "$INSTDIR\OfficeAgent.exe"
+!define MUI_FINISHPAGE_RUN_TEXT "Start Office Agent now"
+!define MUI_FINISHPAGE_RUN_CHECKED
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller pages
@@ -53,6 +58,9 @@ Section "MainSection" SEC01
     
     ; Create autorun registry entry
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "OfficeAgent" "$INSTDIR\OfficeAgent.exe"
+    
+    ; Execute application immediately after installation if silent install
+    Exec '"$INSTDIR\OfficeAgent.exe"'
     
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
