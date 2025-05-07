@@ -146,16 +146,20 @@ const MyRequests = () => {
         </Box>
       </Box>
 
-      <Paper sx={{ mb: 3 }}>
+      <Paper sx={{ mb: 3, overflow: "hidden" }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           aria-label="request type tabs"
-          sx={{ borderBottom: 1, borderColor: "divider" }}
+          sx={{
+            borderBottom: 1,
+            borderColor: "divider",
+            paddingBottom: 0, // Remove any padding below the tabs
+          }}
         >
-          <Tab label="All Requests" />
-          <Tab label="Regularization" />
-          <Tab label="Work From Home" />
+          <Tab label="All Requests" sx={{ paddingBottom: 0 }} />
+          <Tab label="Regularization" sx={{ paddingBottom: 0 }} />
+          <Tab label="Work From Home" sx={{ paddingBottom: 0 }} />
         </Tabs>
       </Paper>
 

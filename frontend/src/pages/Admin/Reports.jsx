@@ -317,32 +317,40 @@ const Reports = () => {
           </Box>
         </Box>
 
-        <Paper sx={{ mb: 3 }}>
+        <Paper sx={{ mb: 3, overflow: "hidden" }}>
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
             aria-label="report type tabs"
-            sx={{ borderBottom: 1, borderColor: "divider" }}
+            sx={{
+              borderBottom: 1,
+              borderColor: "divider",
+              paddingBottom: 0, // Remove any padding below the tabs
+            }}
           >
             <Tab
               label="Attendance"
               icon={<CalendarViewMonthIcon />}
               iconPosition="start"
+              sx={{ paddingBottom: 0 }} // Remove padding for individual Tab elements
             />
             <Tab
               label="Compliance"
               icon={<AssessmentIcon />}
               iconPosition="start"
+              sx={{ paddingBottom: 0 }}
             />
             <Tab
               label="Seat Utilization"
               icon={<EventSeatIcon />}
               iconPosition="start"
+              sx={{ paddingBottom: 0 }}
             />
             <Tab
               label="Requests"
               icon={<AssignmentIcon />}
               iconPosition="start"
+              sx={{ paddingBottom: 0 }}
             />
           </Tabs>
         </Paper>
@@ -409,8 +417,11 @@ const Reports = () => {
             {(tabValue === 0 || tabValue === 1) && (
               <Grid item xs={12} sm={6} md={3}>
                 <FormControl fullWidth margin="normal">
-                  <InputLabel>Department</InputLabel>
+                  <InputLabel shrink htmlFor="departmentFilter">
+                    Department
+                  </InputLabel>
                   <Select
+                    id="departmentFilter"
                     value={departmentFilter}
                     onChange={(e) => setDepartmentFilter(e.target.value)}
                     label="Department"
@@ -433,8 +444,11 @@ const Reports = () => {
             {tabValue === 3 && (
               <Grid item xs={12} sm={6} md={3}>
                 <FormControl fullWidth margin="normal">
-                  <InputLabel>Request Type</InputLabel>
+                  <InputLabel shrink htmlFor="requestTypeFilter">
+                    Request Type
+                  </InputLabel>
                   <Select
+                    id="requestTypeFilter"
                     value={requestTypeFilter}
                     onChange={(e) => setRequestTypeFilter(e.target.value)}
                     label="Request Type"
