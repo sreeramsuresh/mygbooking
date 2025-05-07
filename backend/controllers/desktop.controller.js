@@ -22,14 +22,12 @@ exports.desktopLogin = async (req, res) => {
       );
     }
 
-    // IMPORTANT: Skipping SSID validation to allow connections from any network
-    // The commented code below shows the original validation
-    // if (ssid !== "GIGLABZ_5G") {
-    //   return apiResponse.badRequest(res, "Invalid network connection");
-    // }
-
-    // Log the incoming SSID but don't validate it
-    console.log(`Connection attempt from SSID: ${ssid}`);
+    // Check if the network is GIGLABZ_5G for attendance tracking purposes
+    const isOfficeNetwork = ssid === "GIGLABZ_5G";
+    
+    // We'll record attendance for office network connections only
+    // but allow connections from any network
+    console.log(`Login from SSID: ${ssid} - Office network: ${isOfficeNetwork ? 'Yes' : 'No'}`);
 
     // Find user by email
     const user = await User.findOne({
@@ -178,14 +176,12 @@ exports.trackConnection = async (req, res) => {
       );
     }
 
-    // IMPORTANT: Skipping SSID validation to allow connections from any network
-    // The commented code below shows the original validation
-    // if (ssid !== "GIGLABZ_5G") {
-    //   return apiResponse.badRequest(res, "Invalid network connection");
-    // }
-
-    // Log the incoming SSID but don't validate it
-    console.log(`Connection attempt from SSID: ${ssid}`);
+    // Check if the network is GIGLABZ_5G for attendance tracking purposes
+    const isOfficeNetwork = ssid === "GIGLABZ_5G";
+    
+    // We'll record attendance for office network connections only
+    // but allow connections from any network
+    console.log(`Login from SSID: ${ssid} - Office network: ${isOfficeNetwork ? 'Yes' : 'No'}`);
 
     // Find user by email
     const user = await User.findOne({
@@ -229,6 +225,46 @@ exports.trackConnection = async (req, res) => {
         connectionStartTime: new Date(connection_start_time * 1000),
         isActive: true,
       });
+      
+      // If connected to office network, check if there's a booking for today
+      // and mark it as checked in if not already
+      const isOfficeNetwork = ssid === "GIGLABZ_5G";
+      if (isOfficeNetwork) {
+        // Get today's date in YYYY-MM-DD format
+        const todayDate = new Date().toISOString().split('T')[0];
+        
+        // Find user's booking for today
+        const Booking = db.booking;
+        const todayBooking = await Booking.findOne({
+          where: {
+            userId: user.id,
+            bookingDate: todayDate,
+            status: 'confirmed',
+            checkInTime: null // Not already checked in
+          }
+        });
+        
+        // If booking exists, mark as checked in
+        if (todayBooking) {
+          await todayBooking.update({
+            checkInTime: new Date()
+          });
+          
+          // Log the attendance
+          await db.auditLog.create({
+            entityType: "booking",
+            entityId: todayBooking.id,
+            action: "check-in",
+            performedBy: null, // System performed
+            oldValues: { checkInTime: null },
+            newValues: { checkInTime: new Date() }
+          });
+          
+          console.log(`Auto check-in recorded for user ${user.email}, booking ID ${todayBooking.id}`);
+        } else {
+          console.log(`No active booking found for user ${user.email} on ${todayDate}`);
+        }
+      }
 
       // Update the session with the IP address
       await desktopSession.update({
@@ -452,7 +488,8 @@ exports.getActiveSessions = async (req, res) => {
     }
     
     // First run the auto cleanup to remove any stale sessions
-    const cleanedCount = await autoCleanupInactiveSessions();
+    // Use a shorter timeout (5 minutes instead of 10) to clean up stale sessions more aggressively
+    const cleanedCount = await autoCleanupInactiveSessions(5);
     
     // Get all active desktop sessions with user details
     const activeSessions = await DesktopSession.findAll({
@@ -611,7 +648,7 @@ exports.getActiveSessions = async (req, res) => {
 
 /**
  * Check and clean up inactive sessions
- * This function marks sessions as inactive if they haven't sent a heartbeat in 10+ minutes
+ * This function marks sessions as inactive if they haven't sent a heartbeat in 5+ minutes
  */
 exports.cleanupInactiveSessions = async (req, res) => {
   try {
@@ -626,16 +663,16 @@ exports.cleanupInactiveSessions = async (req, res) => {
       );
     }
     
-    // Calculate cutoff time (10 minutes ago)
-    const tenMinutesAgo = new Date();
-    tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+    // Calculate cutoff time (5 minutes ago - using a shorter timeout for quicker cleanup)
+    const fiveMinutesAgo = new Date();
+    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
     
-    // Find active sessions that haven't been updated in the last 10 minutes
+    // Find active sessions that haven't been updated in the last 5 minutes
     const outdatedSessions = await DesktopSession.findAll({
       where: {
         isActive: true,
         lastActivityAt: {
-          [db.Sequelize.Op.lt]: tenMinutesAgo
+          [db.Sequelize.Op.lt]: fiveMinutesAgo
         }
       },
       include: [
@@ -646,7 +683,7 @@ exports.cleanupInactiveSessions = async (req, res) => {
       ]
     });
     
-    console.log(`Found ${outdatedSessions.length} inactive sessions older than 10 minutes`);
+    console.log(`Found ${outdatedSessions.length} inactive sessions older than 5 minutes`);
     
     // Process each outdated session
     const processedSessions = [];
@@ -711,24 +748,25 @@ exports.cleanupInactiveSessions = async (req, res) => {
 
 /**
  * This function runs automatically during getActiveSessions to clean up stale sessions
+ * @param {number} timeoutMinutes - Number of minutes without activity before a session is considered inactive (default: 10)
  */
-const autoCleanupInactiveSessions = async () => {
+const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
   try {
-    // Calculate cutoff time (10 minutes ago)
-    const tenMinutesAgo = new Date();
-    tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+    // Calculate cutoff time based on provided timeout (default 10 minutes)
+    const cutoffTime = new Date();
+    cutoffTime.setMinutes(cutoffTime.getMinutes() - timeoutMinutes);
     
-    // Find active sessions that haven't been updated in the last 10 minutes
+    // Find active sessions that haven't been updated in the specified time
     const outdatedSessions = await DesktopSession.findAll({
       where: {
         isActive: true,
         lastActivityAt: {
-          [db.Sequelize.Op.lt]: tenMinutesAgo
+          [db.Sequelize.Op.lt]: cutoffTime
         }
       }
     });
     
-    console.log(`Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than 10 minutes`);
+    console.log(`Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than ${timeoutMinutes} minutes`);
     
     // Process each outdated session
     for (const session of outdatedSessions) {

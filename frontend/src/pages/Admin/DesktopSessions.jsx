@@ -170,7 +170,7 @@ const DesktopSessions = () => {
         if (tabValue === 0) {
           fetchSessions();
         }
-      }, 15000); // 15 seconds refresh (more frequent to catch changes faster)
+      }, 10000); // 10 seconds refresh to catch changes faster
       setRefreshInterval(interval);
     } else {
       if (refreshInterval) {
@@ -340,10 +340,10 @@ const DesktopSessions = () => {
         </Box>
 
         <Box>
-          <Tooltip title={autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh (30s)'}>
+          <Tooltip title={autoRefresh ? 'Disable auto-refresh' : 'Enable auto-refresh (10s)'}>
             <Chip
               icon={<RefreshIcon />}
-              label={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+              label={autoRefresh ? 'Auto-refresh ON (10s)' : 'Auto-refresh OFF'}
               color={autoRefresh ? 'success' : 'default'}
               onClick={toggleAutoRefresh}
               sx={{ mr: 2 }}
