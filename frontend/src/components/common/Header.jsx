@@ -59,26 +59,42 @@ const Header = ({ onMobileMenuToggle }) => {
   const notificationsOpen = Boolean(notificationsAnchor);
 
   return (
-    <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+    <AppBar
+      position="fixed"
+      sx={{
+        zIndex: theme.zIndex.drawer + 1,
+        backgroundColor: "white",
+        color: theme.palette.text.secondary,
+        boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.1)",
+        border: "none",
+      }}
+    >
       <Toolbar>
         {isMobile && (
           <IconButton
-            color="inherit"
+            sx={{ mr: 2, color: theme.palette.text.secondary }}
             edge="start"
-            sx={{ mr: 2 }}
             onClick={onMobileMenuToggle}
           >
             <MenuIcon />
           </IconButton>
         )}
 
+        <Box sx={logoText}>
+          <Typography component="span" sx={gigText}>
+            Gig
+          </Typography>
+          <Typography component="span" sx={labzText}>
+            Labz
+          </Typography>
+        </Box>
         <Typography
           variant="h6"
           component={RouterLink}
           to="/dashboard"
           sx={{
             flexGrow: 1,
-            color: "white",
+            color: theme.palette.text.secondary,
             textDecoration: "none",
             fontWeight: "bold",
             letterSpacing: "0.5px",
@@ -91,7 +107,7 @@ const Header = ({ onMobileMenuToggle }) => {
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Tooltip title="Notifications">
               <IconButton
-                color="inherit"
+                sx={{ color: theme.palette.text.secondary }}
                 onClick={handleNotificationsOpen}
                 size="large"
               >
@@ -104,11 +120,16 @@ const Header = ({ onMobileMenuToggle }) => {
             <Tooltip title="Account">
               <IconButton
                 onClick={handleUserMenuOpen}
-                color="inherit"
                 size="large"
-                sx={{ ml: 1 }}
+                sx={{ ml: 1, color: theme.palette.text.secondary }}
               >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.dark" }}>
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor: theme.palette.text.secondary,
+                  }}
+                >
                   {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
                 </Avatar>
               </IconButton>
@@ -205,3 +226,23 @@ const Header = ({ onMobileMenuToggle }) => {
 };
 
 export default Header;
+const logoText = {
+  fontWeight: 700,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  mr: 1,
+  mb: 1,
+};
+
+const gigText = {
+  color: "#2563eb",
+  fontWeight: "700",
+  fontSize: "2rem",
+};
+
+const labzText = {
+  color: "#f59e0b",
+  fontWeight: "700",
+  fontSize: "2rem",
+};
