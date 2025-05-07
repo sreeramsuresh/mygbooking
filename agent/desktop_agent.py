@@ -285,16 +285,30 @@ class OfficeAgent:
         self.is_running = False
         self.previous_ssid = "Unknown"
         
-    def initialize(self):
-        """Initialize the agent"""
+    def initialize(self, gui_get_credentials=None):
+        """Initialize the agent
+        
+        Args:
+            gui_get_credentials: Optional function to get credentials via GUI
+                                Should return (email, password) tuple or (None, None) if canceled
+        """
         # If no credentials provided, try to load from config
         if not self.email or not self.password:
             self.email, self.password = ConfigManager.load_credentials()
         
-        # If still no credentials, prompt for them
+        # If still no credentials and we have a GUI function, use it
+        if (not self.email or not self.password) and gui_get_credentials:
+            self.email, self.password = gui_get_credentials()
+            
+            # If user canceled login
+            if not self.email or not self.password:
+                print("Login canceled by user")
+                return False
+        
+        # If we still have no credentials, we can't proceed
         if not self.email or not self.password:
-            self.email = input("Enter your email: ")
-            self.password = getpass.getpass("Enter your password: ")
+            print("No credentials available")
+            return False
         
         # Authenticate
         success, message = self.api_client.login(self.email, self.password)
@@ -330,6 +344,22 @@ class OfficeAgent:
                 print(f"Disconnected from {self.previous_ssid}: {message}")
             else:
                 print(f"Disconnection tracking failed: {message}")
+        
+        # Handle SSID changes (when connected to a different network)
+        elif current_ssid != "Unknown" and self.previous_ssid != "Unknown" and current_ssid != self.previous_ssid:
+            # First disconnect from previous network
+            success, message = self.api_client.track_connection(is_connect=False)
+            if success:
+                print(f"Disconnected from {self.previous_ssid}: {message}")
+            else:
+                print(f"Disconnection tracking failed: {message}")
+            
+            # Then connect to new network
+            success, message = self.api_client.track_connection(is_connect=True)
+            if success:
+                print(f"Connected to {current_ssid}: {message}")
+            else:
+                print(f"Connection tracking failed: {message}")
         
         # Update previous SSID
         self.previous_ssid = current_ssid
