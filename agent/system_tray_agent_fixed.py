@@ -90,55 +90,133 @@ class SystemTrayAgent(QtWidgets.QSystemTrayIcon):
     def __init__(self, parent=None):
         QtWidgets.QSystemTrayIcon.__init__(self, parent)
         
-        # Set the tray icon
-        self.setIcon(QtGui.QIcon(self.get_icon_path()))
-        
-        # Create the menu
-        self.menu = QtWidgets.QMenu(parent)
-        
-        # Add menu items
-        self.status_action = self.menu.addAction("Status: Initializing...")
-        self.status_action.setEnabled(False)
-        
-        self.menu.addSeparator()
-        
-        self.logout_action = self.menu.addAction("Logout")
-        self.logout_action.triggered.connect(self.logout)
-        
-        exit_action = self.menu.addAction("Exit")
-        exit_action.triggered.connect(self.exit_app)
-        
-        # Set the menu
-        self.setContextMenu(self.menu)
-        
-        # Show the icon
-        self.show()
-        
-        # Set tooltip
-        self.setToolTip("Office Agent")
-        
-        # Initialize the agent
-        self.agent = OfficeAgent()
-        self.agent_thread = None
-        
-        # Auto-start the agent
-        self.start_agent()
-    
-    def start_agent(self):
-        """Start the agent in a separate thread"""
-        if self.agent_thread and self.agent_thread.is_alive():
-            self.showMessage("Office Agent", "Agent is already running", QtWidgets.QSystemTrayIcon.Information, 2000)
-            return
-
         try:
-            self.status_action.setText("Status: Running")
-            self.agent_thread = threading.Thread(target=self.agent.run)
-            self.agent_thread.setDaemon(True)
-            self.agent_thread.start()
+            log_to_file("Initializing SystemTrayAgent")
+            
+            # Set the tray icon
+            self.setIcon(QtGui.QIcon(self.get_icon_path()))
+            
+            # Create the menu
+            self.menu = QtWidgets.QMenu(parent)
+            
+            # Add menu items
+            self.status_action = self.menu.addAction("Status: Initializing...")
+            self.status_action.setEnabled(False)
+            
+            self.menu.addSeparator()
+            
+            self.logout_action = self.menu.addAction("Logout")
+            self.logout_action.triggered.connect(self.logout)
+            
+            exit_action = self.menu.addAction("Exit")
+            exit_action.triggered.connect(self.exit_app)
+            
+            # Set the menu
+            self.setContextMenu(self.menu)
+            
+            # Show the icon
+            self.show()
+            
+            # Set tooltip
+            self.setToolTip("Office Agent")
+            
+            # Initialize the agent
+            self.agent = OfficeAgent()
+            self.agent_thread = None
+            
+            # Auto-start the agent
+            log_to_file("About to initialize agent")
+            self.initialize_agent()
+            log_to_file("Agent initialization completed")
         except Exception as e:
-            log_to_file(f"Error starting agent: {str(e)}")
+            log_to_file(f"Error in SystemTrayAgent.__init__: {str(e)}\n{traceback.format_exc()}")
+    
+    def get_gui_credentials(self):
+        """Show login dialog to get credentials"""
+        try:
+            dialog = LoginDialog(self.parent())
+            result = dialog.exec_()
+            
+            if result == QtWidgets.QDialog.Accepted:
+                return dialog.get_credentials()
+            
+            return None, None
+        except Exception as e:
+            log_to_file(f"Error in get_gui_credentials: {str(e)}")
+            return None, None
+    
+    def initialize_agent(self):
+        """Initialize and start the agent"""
+        try:
+            # Initialize the agent
+            if not self.agent.initialize(self.get_gui_credentials):
+                self.showMessage("Office Agent", "Failed to initialize agent", QtWidgets.QSystemTrayIcon.Critical, 2000)
+                self.status_action.setText("Status: Initialization failed")
+                log_to_file("Agent initialization failed")
+                return
+                
+            # Set status
+            self.status_action.setText("Status: Running")
+            
+            # Start the agent thread
+            self.start_agent_thread()
+        except Exception as e:
+            log_to_file(f"Error in initialize_agent: {str(e)}\n{traceback.format_exc()}")
             self.status_action.setText("Status: Error")
-
+    
+    def start_agent_thread(self):
+        """Start the agent in a separate thread"""
+        try:
+            if self.agent_thread and self.agent_thread.is_alive():
+                log_to_file("Agent thread is already running")
+                return
+                
+            log_to_file("Starting agent thread")
+            self.agent_thread = threading.Thread(target=self.run_agent_loop)
+            self.agent_thread.daemon = True
+            self.agent_thread.start()
+            log_to_file("Agent thread started")
+        except Exception as e:
+            log_to_file(f"Error starting agent thread: {str(e)}\n{traceback.format_exc()}")
+    
+    def run_agent_loop(self):
+        """The main agent loop running in a thread"""
+        try:
+            log_to_file("Agent loop started")
+            heartbeat_counter = 0
+            
+            # Initial network check
+            self.agent.check_network()
+            
+            while self.agent.is_running:
+                # Use shorter sleep intervals
+                for _ in range(6):  # 6 x 5 seconds = 30 seconds
+                    time.sleep(5)
+                    if not self.agent.is_running:
+                        break
+                        
+                if not self.agent.is_running:
+                    break
+                
+                # Check network
+                self.agent.check_network()
+                
+                # Send heartbeat every 2 minutes (4 cycles)
+                heartbeat_counter += 1
+                if heartbeat_counter >= 4:
+                    if self.agent.api_client.connected:
+                        success, message = self.agent.api_client.send_heartbeat()
+                        if not success and message == "Session not found":
+                            # Force reconnect
+                            self.agent.api_client.track_connection(is_connect=True)
+                    
+                    heartbeat_counter = 0
+            
+            log_to_file("Agent loop exited normally")
+        except Exception as e:
+            log_to_file(f"Error in agent thread: {str(e)}\n{traceback.format_exc()}")
+            self.status_action.setText(f"Status: Error")
+    
     def get_icon_path(self):
         """Get the path to the icon file, works both when running as script and as frozen executable"""
         try:
@@ -148,8 +226,9 @@ class SystemTrayAgent(QtWidgets.QSystemTrayIcon):
                 base_path = os.path.dirname(os.path.abspath(__file__))
             icon_path = os.path.join(base_path, "icon.ico")
             if not os.path.exists(icon_path):
-                log_to_file("Icon file not found. Using default system icon.")
+                log_to_file(f"Icon file not found at {icon_path}. Using default system icon.")
                 return "C:\\Windows\\System32\\shell32.dll,1"
+            log_to_file(f"Using icon at: {icon_path}")
             return icon_path
         except Exception as e:
             log_to_file(f"Error getting icon path: {str(e)}")
@@ -157,21 +236,57 @@ class SystemTrayAgent(QtWidgets.QSystemTrayIcon):
 
     def logout(self):
         """Logout and clear credentials"""
-        log_to_file("User initiated logout")
-        ConfigManager.clear_credentials()
-        self.showMessage("Office Agent", "Logged out and credentials cleared", QtWidgets.QSystemTrayIcon.Information, 2000)
-        self.status_action.setText("Status: Logged out")
+        try:
+            log_to_file("User initiated logout")
+            
+            # Stop the agent if running
+            if self.agent_thread and self.agent_thread.is_alive():
+                self.agent.stop()
+                self.agent.is_running = False
+                
+            # Clear credentials
+            ConfigManager.clear_credentials()
+            
+            self.showMessage("Office Agent", "Logged out and credentials cleared", QtWidgets.QSystemTrayIcon.Information, 2000)
+            self.status_action.setText("Status: Logged out")
+            
+            # Reset the agent
+            self.agent = OfficeAgent()
+            
+            # Try to initialize again
+            self.initialize_agent()
+        except Exception as e:
+            log_to_file(f"Error in logout: {str(e)}")
 
     def exit_app(self):
-        QtWidgets.QApplication.quit()
+        """Exit the application"""
+        try:
+            log_to_file("User initiated exit")
+            
+            # Stop the agent if running
+            if self.agent_thread and self.agent_thread.is_alive():
+                self.agent.stop()
+                self.agent.is_running = False
+                self.agent_thread.join(2.0)  # Wait for thread to finish with timeout
+            
+            QtWidgets.QApplication.quit()
+        except Exception as e:
+            log_to_file(f"Error in exit_app: {str(e)}")
+            # Force quit
+            QtWidgets.QApplication.quit()
 
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    window = QtWidgets.QWidget()
-    tray_agent = SystemTrayAgent(window)
-    sys.exit(app.exec_())
+    try:
+        log_to_file("Starting Office Agent application")
+        app = QtWidgets.QApplication(sys.argv)
+        app.setQuitOnLastWindowClosed(False)
+        window = QtWidgets.QWidget()
+        tray_agent = SystemTrayAgent(window)
+        log_to_file("Application started, entering event loop")
+        sys.exit(app.exec_())
+    except Exception as e:
+        log_to_file(f"Fatal error in main: {str(e)}\n{traceback.format_exc()}")
 
 
 if __name__ == "__main__":

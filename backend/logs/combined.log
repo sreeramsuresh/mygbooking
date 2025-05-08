@@ -782,3 +782,39 @@
 2025-05-07T06:30:00.231Z info: User 5 has existing booking on 2025-05-19
 2025-05-07T06:30:00.231Z info: User 5 has existing booking on 2025-05-23
 2025-05-07T06:30:00.231Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-08T02:12:50.441Z info: Checking database structure...
+2025-05-08T02:12:51.819Z info: Database synchronized successfully.
+2025-05-08T02:12:51.828Z info: Roles already exist, skipping seed.
+2025-05-08T02:12:51.831Z info: Users already exist, skipping admin user creation.
+2025-05-08T02:12:51.835Z info: Seats already exist, skipping seat creation.
+2025-05-08T02:12:51.842Z info: All users have valid auto-booking preferences
+2025-05-08T02:12:51.843Z info: Database initialization completed successfully.
+2025-05-08T02:12:51.850Z info: Scheduler initialized successfully
+2025-05-08T02:12:51.855Z info: Server is running on port 9600
+2025-05-08T02:13:01.859Z info: Running initial auto-booking process at startup
+2025-05-08T02:13:01.861Z info: Starting auto-booking process for all users
+2025-05-08T02:13:01.869Z info: Found 1 admin users to exclude from auto-booking
+2025-05-08T02:13:01.874Z info: Found 3 active users to process
+2025-05-08T02:13:01.875Z info: Processing user 2 (sreeram.s)
+2025-05-08T02:13:01.875Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-05-08T02:13:01.875Z info: Checking existing bookings for user 2 from 2025-05-19 to 2025-06-05
+2025-05-08T02:13:01.894Z info: User 2 already has 5 future bookings between 2025-05-19 and 2025-06-05 - skipping
+2025-05-08T02:13:01.895Z info: User 2 has existing booking on 2025-05-19
+2025-05-08T02:13:01.895Z info: User 2 has existing booking on 2025-05-20
+2025-05-08T02:13:01.896Z info: User 2 has existing booking on 2025-05-21
+2025-05-08T02:13:01.896Z info: User 2 has existing booking on 2025-05-22
+2025-05-08T02:13:01.896Z info: User 2 has existing booking on 2025-05-23
+2025-05-08T02:13:01.897Z info: Processing user 4 (sarath.h)
+2025-05-08T02:13:01.897Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-05-08T02:13:01.897Z info: Checking existing bookings for user 4 from 2025-05-19 to 2025-06-05
+2025-05-08T02:13:01.902Z info: User 4 already has 2 future bookings between 2025-05-19 and 2025-06-05 - skipping
+2025-05-08T02:13:01.902Z info: User 4 has existing booking on 2025-05-22
+2025-05-08T02:13:01.903Z info: User 4 has existing booking on 2025-05-23
+2025-05-08T02:13:01.903Z info: Processing user 5 (anand.vp)
+2025-05-08T02:13:01.903Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-05-08T02:13:01.904Z info: Checking existing bookings for user 5 from 2025-05-19 to 2025-06-05
+2025-05-08T02:13:01.909Z info: User 5 already has 2 future bookings between 2025-05-19 and 2025-06-05 - skipping
+2025-05-08T02:13:01.909Z info: User 5 has existing booking on 2025-05-19
+2025-05-08T02:13:01.909Z info: User 5 has existing booking on 2025-05-23
+2025-05-08T02:13:01.910Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-08T02:13:01.910Z info: Initial auto-booking process completed successfully
