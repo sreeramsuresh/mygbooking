@@ -30,7 +30,8 @@ def build_exe():
         subprocess.check_call([
             'pyinstaller',
             '--name=OfficeAgent',
-            '--windowed',
+            '--windowed',  # This creates a GUI app without console window
+            '--noconsole', # Explicitly specify no console window
             '--icon=icon.ico',
             '--add-data=icon.ico;.',
             '--clean',
@@ -134,9 +135,6 @@ Section "MainSection" SEC01
     
     ; Create autorun registry entry
     WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "OfficeAgent" "$INSTDIR\\OfficeAgent.exe"
-    
-    ; Execute application immediately after installation if silent install
-    Exec '"$INSTDIR\\OfficeAgent.exe"'
     
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\\uninstall.exe"

@@ -2,8 +2,42 @@ import os
 import sys
 import time
 import threading
+import traceback
 from PyQt5 import QtWidgets, QtGui, QtCore
-from desktop_agent import OfficeAgent, ConfigManager
+
+# Redirect stdout and stderr to prevent console window from showing
+class NullWriter:
+    def write(self, text):
+        pass
+    def flush(self):
+        pass
+
+# Only redirect if not in development mode
+if getattr(sys, 'frozen', False):  # Running as compiled executable
+    sys.stdout = NullWriter()
+    sys.stderr = NullWriter()
+
+# Create a log file for debugging purposes
+log_file = os.path.join(os.path.expanduser('~'), '.office_agent_log.txt')
+
+def log_to_file(message):
+    """Write log messages to file instead of console"""
+    try:
+        with open(log_file, 'a') as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+    except:
+        pass  # Silently fail if we can't write to log
+
+# Replace print with log_to_file
+print = log_to_file
+
+# Import the agent module
+try:
+    from desktop_agent_fixed import OfficeAgent, ConfigManager
+    log_to_file("Successfully imported desktop_agent_fixed module")
+except Exception as e:
+    log_to_file(f"Error importing desktop_agent_fixed: {str(e)}\n{traceback.format_exc()}")
+    raise
 
 class LoginDialog(QtWidgets.QDialog):
     """Dialog for collecting login credentials"""
@@ -90,139 +124,53 @@ class SystemTrayAgent(QtWidgets.QSystemTrayIcon):
         # Auto-start the agent
         self.start_agent()
     
-    def get_icon_path(self):
-        """Get the path to the icon file, works both when running as script and as frozen executable"""
-        if getattr(sys, 'frozen', False):
-            # Running as compiled executable
-            base_path = sys._MEIPASS
-        else:
-            # Running as script
-            base_path = os.path.dirname(os.path.abspath(__file__))
-        
-        # Default icon path - you should replace this with your own icon
-        icon_path = os.path.join(base_path, "icon.ico")
-        
-        # If icon doesn't exist, use a system icon
-        if not os.path.exists(icon_path):
-            for system_icon in [
-                "C:\\Windows\\System32\\imageres.dll,15",  # Default app icon
-                "C:\\Windows\\System32\\shell32.dll,1",    # Document icon
-            ]:
-                return system_icon
-        
-        return icon_path
-    
-    def get_gui_credentials(self):
-        """Show login dialog to get credentials"""
-        dialog = LoginDialog(self.parent())
-        result = dialog.exec_()
-        
-        if result == QtWidgets.QDialog.Accepted:
-            return dialog.get_credentials()
-        
-        return None, None
-    
     def start_agent(self):
         """Start the agent in a separate thread"""
         if self.agent_thread and self.agent_thread.is_alive():
             self.showMessage("Office Agent", "Agent is already running", QtWidgets.QSystemTrayIcon.Information, 2000)
             return
-        
-        # Initialize the agent if needed
-        if not self.agent.initialize(self.get_gui_credentials):
-            self.showMessage("Office Agent", "Failed to initialize agent", QtWidgets.QSystemTrayIcon.Critical, 2000)
-            return
-        
-        # Set status
-        self.status_action.setText("Status: Running")
-        
-        # Create and start the thread
-        self.agent.is_running = True
-        self.agent_thread = threading.Thread(target=self.run_agent_loop)
-        self.agent_thread.daemon = True
-        self.agent_thread.start()
-        
-        self.showMessage("Office Agent", "Agent started successfully", QtWidgets.QSystemTrayIcon.Information, 2000)
-    
-    def run_agent_loop(self):
-        """The main agent loop running in a thread"""
-        heartbeat_counter = 0
-        
-        # Initial network check
-        self.agent.check_network()
-        
+
         try:
-            while self.agent.is_running:
-                # Use shorter sleep intervals
-                for _ in range(6):  # 6 x 5 seconds = 30 seconds
-                    time.sleep(5)
-                    if not self.agent.is_running:
-                        break
-                        
-                if not self.agent.is_running:
-                    break
-                
-                # Check network
-                self.agent.check_network()
-                
-                # Send heartbeat every 2 minutes (4 cycles)
-                heartbeat_counter += 1
-                if heartbeat_counter >= 4:
-                    if self.agent.api_client.connected:
-                        success, message = self.agent.api_client.send_heartbeat()
-                        if not success and message == "Session not found":
-                            # Force reconnect
-                            self.agent.api_client.track_connection(is_connect=True)
-                    
-                    heartbeat_counter = 0
+            self.status_action.setText("Status: Running")
+            self.agent_thread = threading.Thread(target=self.agent.run)
+            self.agent_thread.setDaemon(True)
+            self.agent_thread.start()
         except Exception as e:
-            print(f"Error in agent thread: {str(e)}")
-            self.status_action.setText(f"Status: Error - {str(e)}")
-    
+            log_to_file(f"Error starting agent: {str(e)}")
+            self.status_action.setText("Status: Error")
+
+    def get_icon_path(self):
+        """Get the path to the icon file, works both when running as script and as frozen executable"""
+        try:
+            if getattr(sys, 'frozen', False):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(base_path, "icon.ico")
+            if not os.path.exists(icon_path):
+                log_to_file("Icon file not found. Using default system icon.")
+                return "C:\\Windows\\System32\\shell32.dll,1"
+            return icon_path
+        except Exception as e:
+            log_to_file(f"Error getting icon path: {str(e)}")
+            return "C:\\Windows\\System32\\shell32.dll,1"
+
     def logout(self):
         """Logout and clear credentials"""
-        # Stop agent first if running
-        if self.agent_thread and self.agent_thread.is_alive():
-            self.agent.stop()
-            self.agent.is_running = False
-            self.agent_thread.join(2.0)  # Wait for thread to finish with timeout
-        
-        # Clear credentials
+        log_to_file("User initiated logout")
         ConfigManager.clear_credentials()
-        
         self.showMessage("Office Agent", "Logged out and credentials cleared", QtWidgets.QSystemTrayIcon.Information, 2000)
-        
-        # Reset agent and restart
-        self.agent = OfficeAgent()
-        self.start_agent()
-    
+        self.status_action.setText("Status: Logged out")
+
     def exit_app(self):
-        """Exit the application"""
-        # Stop the agent first if running
-        if self.agent_thread and self.agent_thread.is_alive():
-            # Call the agent's stop method but don't update UI
-            self.agent.stop()
-            self.agent.is_running = False
-            self.agent_thread.join(2.0)  # Wait for thread to finish with timeout
-        
         QtWidgets.QApplication.quit()
 
 
 def main():
-    # Create application
     app = QtWidgets.QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)  # Don't quit when last window closed
-    
-    # Create window for parenting dialogs
+    app.setQuitOnLastWindowClosed(False)
     window = QtWidgets.QWidget()
-    window.resize(1, 1)
-    window.setWindowTitle("Office Agent")
-    window.hide()
-    
-    # Create tray icon
     tray_agent = SystemTrayAgent(window)
-    
-    # Run the app
     sys.exit(app.exec_())
 
 
