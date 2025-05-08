@@ -30,8 +30,8 @@ if 'log_to_file' not in globals():
 
 # Constants
 CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.office_agent_config')
-# API_BASE_URL = 'http://localhost:9600/api/desktop'  # Replace with your server URL
-API_BASE_URL = 'https://gbooking.giglabz.co.in/api/desktop'  # Replace with your server URL
+API_BASE_URL = 'http://localhost:9600/api/desktop'  # Replace with your server URL
+# API_BASE_URL = 'https://gbooking.giglabz.co.in/api/desktop'  # Replace with your server URL
 
 class NetworkMonitor:
     """Class to monitor network connection and get network details"""
