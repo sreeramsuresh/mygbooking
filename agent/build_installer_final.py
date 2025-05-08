@@ -95,7 +95,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('icon.ico', '.')],
-    hiddenimports=['win32timezone', 'win32process', 'win32api'],
+    hiddenimports=['win32timezone', 'win32process', 'win32api', 'wmi'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -186,7 +186,6 @@ def build_installer():
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
-; FileFunc.nsh not used in this script
 
 ; Define variables
 !define PRODUCT_NAME "Office Agent"
@@ -234,10 +233,10 @@ Section "MainSection" SEC01
     ; Copy all files from dist folder
     File /r "dist\\OfficeAgent\\*.*"
     
-    ; Create shortcuts
+    ; Create start menu shortcuts only, NOT desktop shortcuts
     CreateDirectory "$SMPROGRAMS\\Office Agent"
     CreateShortCut "$SMPROGRAMS\\Office Agent\\Office Agent.lnk" "$INSTDIR\\OfficeAgent.exe"
-    CreateShortCut "$DESKTOP\\Office Agent.lnk" "$INSTDIR\\OfficeAgent.exe"
+    ; Removed desktop shortcut creation
     
     ; Create autorun registry entry
     WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "OfficeAgent" "$INSTDIR\\OfficeAgent.exe"
@@ -262,7 +261,7 @@ SectionEnd
 Section Uninstall
     ; Remove shortcuts
     Delete "$SMPROGRAMS\\Office Agent\\Office Agent.lnk"
-    Delete "$DESKTOP\\Office Agent.lnk"
+    ; No need to delete desktop shortcut as we don't create it anymore
     RMDir "$SMPROGRAMS\\Office Agent"
     
     ; Remove registry entries

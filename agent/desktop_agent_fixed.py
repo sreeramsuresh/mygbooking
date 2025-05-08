@@ -121,77 +121,206 @@ class NetworkMonitor:
     
     @staticmethod
     def get_current_ssid():
-        """Get the current SSID"""
+        """Get the current SSID using methods that don't show console windows"""
         ssid = "Unknown"
         
         try:
-            # Try to get the SSID using different methods based on platform
+            # Windows-specific methods
             if sys.platform == 'win32':
+                # Method 1: Using netsh (with hidden window)
                 try:
-                    # Our subprocess overrides should ensure no window appears
-                    output = subprocess.check_output(['netsh', 'wlan', 'show', 'interfaces']).decode('utf-8')
+                    # Make sure subprocess settings are properly set
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    create_no_window = 0x08000000
+                    
+                    # Execute netsh command with hidden window
+                    output = subprocess.check_output(
+                        ['netsh', 'wlan', 'show', 'interfaces'], 
+                        startupinfo=startupinfo,
+                        creationflags=create_no_window,
+                        stderr=subprocess.STDOUT
+                    ).decode('utf-8', errors='ignore')
+                    
+                    # Parse the output to find SSID
                     for line in output.split('\n'):
                         if 'SSID' in line and 'BSSID' not in line:
-                            ssid = line.split(':')[1].strip()
-                            break
-                except Exception as e:
-                    log_to_file(f"Error getting SSID via netsh: {str(e)}")
+                            parts = line.split(':')
+                            if len(parts) >= 2:
+                                possible_ssid = parts[1].strip()
+                                if possible_ssid and possible_ssid != "":
+                                    ssid = possible_ssid
+                                    break
                     
-                    # Alternative method for Windows without using netsh
-                    if ssid == "Unknown":
-                        try:
-                            # Try using WMI instead (no subprocess needed)
-                            import wmi
-                            c = wmi.WMI()
-                            for interface in c.Win32_NetworkAdapter():
-                                if interface.NetConnectionStatus == 2:  # 2 = Connected
-                                    return interface.NetConnectionID or "Office-Network"
-                        except Exception:
-                            pass
-            
-            elif sys.platform == 'darwin':  # macOS
+                    log_to_file(f"SSID detected via netsh: {ssid}")
+                    if ssid != "Unknown":
+                        return ssid
+                except Exception as e:
+                    log_to_file(f"SSID detection via netsh failed: {str(e)}")
+                
+                # Method 2: Using WMI (doesn't use subprocess)
                 try:
-                    output = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport', '-I']).decode('utf-8')
+                    import wmi
+                    c = wmi.WMI()
+                    
+                    # Try to get Wi-Fi connection information from WMI
+                    for network in c.MSFT_WlanConnection():
+                        if network.ProfileName:
+                            ssid = network.ProfileName
+                            log_to_file(f"SSID detected via WMI MSFT_WlanConnection: {ssid}")
+                            return ssid
+                            
+                    # Alternative WMI approach
+                    for nic in c.Win32_NetworkAdapter():
+                        if nic.NetConnectionStatus == 2:  # 2 = Connected
+                            if nic.Name and ("Wi-Fi" in nic.Name or "Wireless" in nic.Name or "WLAN" in nic.Name):
+                                connection_id = nic.NetConnectionID
+                                if connection_id:
+                                    log_to_file(f"SSID detected via Win32_NetworkAdapter: {connection_id}")
+                                    return connection_id
+                except Exception as e:
+                    log_to_file(f"SSID detection via WMI failed: {str(e)}")
+                
+                # Method 3: Using PowerShell (with hidden window)
+                try:
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    create_no_window = 0x08000000
+                    
+                    # Execute PowerShell command with hidden window
+                    ps_command = "(Get-NetConnectionProfile).Name"
+                    output = subprocess.check_output(
+                        ['powershell', '-Command', ps_command],
+                        startupinfo=startupinfo,
+                        creationflags=create_no_window,
+                        stderr=subprocess.STDOUT
+                    ).decode('utf-8', errors='ignore').strip()
+                    
+                    if output and output != "":
+                        ssid = output
+                        log_to_file(f"SSID detected via PowerShell: {ssid}")
+                        return ssid
+                except Exception as e:
+                    log_to_file(f"SSID detection via PowerShell failed: {str(e)}")
+                
+                # Method 4: Use the Windows API directly (no subprocess)
+                try:
+                    import ctypes
+                    from ctypes import windll, byref, Structure, POINTER, WINFUNCTYPE
+                    from ctypes.wintypes import DWORD, HANDLE, BOOL
+                    
+                    class WLAN_INTERFACE_INFO_LIST(Structure):
+                        pass
+                    
+                    wlanapi = windll.LoadLibrary('wlanapi.dll')
+                    
+                    # Open handle to WLAN API
+                    handle = HANDLE()
+                    client_version = DWORD()
+                    negotiated_version = DWORD()
+                    wlanapi.WlanOpenHandle(2, None, byref(client_version), byref(handle))
+                    
+                    # Enumerate interfaces
+                    interfaces = POINTER(WLAN_INTERFACE_INFO_LIST)()
+                    wlanapi.WlanEnumInterfaces(handle, None, byref(interfaces))
+                    
+                    # Get connection info for first interface with "connected" status (1)
+                    if interfaces and interfaces.contents.dwNumberOfItems > 0:
+                        from ctypes.wintypes import BYTE, UINT
+                        
+                        class DOT11_MAC_ADDRESS(Structure):
+                            _fields_ = [("ucDot11MacAddress", BYTE * 6)]
+                        
+                        class DOT11_SSID(Structure):
+                            _fields_ = [
+                                ("uSSIDLength", UINT),
+                                ("ucSSID", BYTE * 32)
+                            ]
+                        
+                        class WLAN_CONNECTION_ATTRIBUTES(Structure):
+                            _fields_ = [
+                                ("isState", UINT),
+                                ("wlanConnectionMode", UINT),
+                                ("strProfileName", ctypes.c_wchar * 256),
+                                ("dot11Ssid", DOT11_SSID),
+                                ("dot11BssType", UINT),
+                                ("dot11BssidList", DOT11_MAC_ADDRESS),
+                                ("wlanSignalQuality", UINT),
+                                ("rxRate", UINT),
+                                ("txRate", UINT)
+                            ]
+                        
+                        conn_info = POINTER(WLAN_CONNECTION_ATTRIBUTES)()
+                        for i in range(interfaces.contents.dwNumberOfItems):
+                            interface_guid = interfaces.contents.InterfaceInfo[i].InterfaceGuid
+                            wlanapi.WlanQueryInterface(
+                                handle,
+                                byref(interface_guid),
+                                7,  # wlan_intf_opcode_current_connection
+                                None,
+                                byref(client_version),
+                                byref(conn_info),
+                                None
+                            )
+                            if conn_info and conn_info.contents.isState == 1:  # connected
+                                ssid_bytes = conn_info.contents.dot11Ssid.ucSSID
+                                ssid_len = conn_info.contents.dot11Ssid.uSSIDLength
+                                if ssid_len > 0:
+                                    ssid = "".join(chr(ssid_bytes[i]) for i in range(ssid_len))
+                                    log_to_file(f"SSID detected via Windows API: {ssid}")
+                                    return ssid
+                    
+                    # Clean up
+                    wlanapi.WlanCloseHandle(handle, None)
+                except Exception as e:
+                    log_to_file(f"SSID detection via Windows API failed: {str(e)}")
+            
+            # macOS-specific methods
+            elif sys.platform == 'darwin':
+                try:
+                    # Method 1: Using airport command
+                    output = subprocess.check_output(
+                        ['/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport', '-I']
+                    ).decode('utf-8')
                     for line in output.split('\n'):
                         if ' SSID:' in line:
                             ssid = line.split(':')[1].strip()
-                            break
+                            log_to_file(f"SSID detected via airport command: {ssid}")
+                            return ssid
                 except Exception as e:
-                    log_to_file(f"Error getting macOS SSID: {str(e)}")
+                    log_to_file(f"SSID detection on macOS failed: {str(e)}")
             
+            # Linux-specific methods
             elif sys.platform.startswith('linux'):
                 try:
+                    # Method 1: Using iwgetid
                     output = subprocess.check_output(['iwgetid', '-r']).decode('utf-8').strip()
                     if output:
                         ssid = output
+                        log_to_file(f"SSID detected via iwgetid: {ssid}")
+                        return ssid
                 except Exception as e:
-                    log_to_file(f"Error getting Linux SSID: {str(e)}")
+                    log_to_file(f"SSID detection via iwgetid failed: {str(e)}")
                     
-                    # Alternative method for Linux
-                    if ssid == "Unknown":
-                        try:
-                            # Try reading directly from /proc/net/wireless
-                            with open('/proc/net/wireless', 'r') as f:
-                                for line in f:
-                                    if ':' in line:
-                                        ssid = "Office-Network"  # We can't get the actual SSID this way
-                                        break
-                        except Exception:
-                            pass
+                try:
+                    # Method 2: Using nmcli (NetworkManager)
+                    output = subprocess.check_output(
+                        ['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi']
+                    ).decode('utf-8')
+                    for line in output.split('\n'):
+                        if line.startswith('yes:'):
+                            ssid = line.split(':')[1]
+                            log_to_file(f"SSID detected via nmcli: {ssid}")
+                            return ssid
+                except Exception as e:
+                    log_to_file(f"SSID detection via nmcli failed: {str(e)}")
             
-            # If all methods failed, assume we're in the office for Windows
-            if ssid == "Unknown" and sys.platform == 'win32':
-                # For production office apps, assume we're connected to office network
-                # This prevents command window flashes and still allows tracking
-                ssid = "Office-Network"
-        
+            log_to_file(f"All SSID detection methods failed, returning: {ssid}")
+            return ssid
+                
         except Exception as outer_e:
             log_to_file(f"Critical error in get_current_ssid: {str(outer_e)}")
-            # In case of any issues, assume office network on Windows for stability
-            if sys.platform == 'win32':
-                ssid = "Office-Network"
-                
-        return ssid
+            return ssid
 
 
 class ApiClient:
