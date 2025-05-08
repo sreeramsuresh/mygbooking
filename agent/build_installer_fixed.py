@@ -5,6 +5,13 @@ import shutil
 import winreg
 import time
 
+# Create startupinfo object to hide console windows in subprocesses
+startupinfo = None
+if hasattr(subprocess, 'STARTUPINFO'):
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    CREATE_NO_WINDOW = 0x08000000
+
 # Paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.join(CURRENT_DIR, 'dist')
@@ -26,7 +33,33 @@ def build_exe():
         if os.path.exists(BUILD_DIR):
             shutil.rmtree(BUILD_DIR)
         
-        # Run PyInstaller directly
+        # Create a special entry point file that ensures no console windows
+        entry_file = os.path.join(CURRENT_DIR, 'office_agent_wrapper.py')
+        with open(entry_file, 'w') as f:
+            f.write("""import os
+import sys
+import ctypes
+
+# Prevent Windows from showing the console window
+if sys.platform == 'win32':
+    # Ensure we don't show a console window
+    kernel32 = ctypes.WinDLL('kernel32')
+    user32 = ctypes.WinDLL('user32')
+    
+    # Try to detach from console
+    kernel32.FreeConsole()
+    
+    # Hide console window if it exists
+    hwnd = kernel32.GetConsoleWindow()
+    if hwnd != 0:
+        user32.ShowWindow(hwnd, 0)  # SW_HIDE = 0
+
+# Now import and run the actual application
+from system_tray_agent_fixed import main
+main()
+""")
+
+        # Run PyInstaller directly with our wrapper
         subprocess.check_call([
             'pyinstaller',
             '--name=OfficeAgent',
@@ -35,8 +68,8 @@ def build_exe():
             '--icon=icon.ico',
             '--add-data=icon.ico;.',
             '--clean',
-            'system_tray_agent_fixed.py'
-        ])
+            'office_agent_wrapper.py'  # Use our wrapper instead of direct file
+        ], startupinfo=startupinfo, creationflags=CREATE_NO_WINDOW if startupinfo else 0)
         
         return True
     except Exception as e:
@@ -179,7 +212,7 @@ SectionEnd
             subprocess.check_call([
                 nsis_path,
                 nsis_script
-            ])
+            ], startupinfo=startupinfo, creationflags=CREATE_NO_WINDOW if startupinfo else 0)
             
             print(f"Installer created: {os.path.join(CURRENT_DIR, 'OfficeAgent_Setup.exe')}")
             return True

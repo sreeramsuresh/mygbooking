@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['system_tray_agent_fixed.py'],
+    ['office_agent_wrapper.py'],
     pathex=[],
     binaries=[],
     datas=[('icon.ico', '.')],

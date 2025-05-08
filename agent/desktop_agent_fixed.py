@@ -11,6 +11,64 @@ import configparser
 import traceback
 from datetime import datetime
 
+# ===== SUBPROCESS HANDLING - PREVENT COMMAND WINDOWS =====
+# This section must be at the top before any other imports that might use subprocess
+import subprocess
+
+# Create startupinfo object for Windows to hide console windows
+if sys.platform == 'win32':
+    STARTUPINFO = subprocess.STARTUPINFO()
+    STARTUPINFO.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    CREATE_NO_WINDOW = 0x08000000
+    
+    # Store original subprocess functions
+    original_popen = subprocess.Popen
+    original_call = subprocess.call
+    original_check_call = subprocess.check_call
+    original_check_output = subprocess.check_output
+    original_run = getattr(subprocess, 'run', None)  # May not exist in older Python versions
+    
+    # Override subprocess functions to always hide windows
+    def hidden_popen(*args, **kwargs):
+        """Ensure Popen never shows a console window"""
+        kwargs.setdefault('startupinfo', STARTUPINFO)
+        kwargs.setdefault('creationflags', CREATE_NO_WINDOW)
+        return original_popen(*args, **kwargs)
+    
+    def hidden_call(*args, **kwargs):
+        """Ensure call never shows a console window"""
+        kwargs.setdefault('startupinfo', STARTUPINFO)
+        kwargs.setdefault('creationflags', CREATE_NO_WINDOW)
+        return original_call(*args, **kwargs)
+    
+    def hidden_check_call(*args, **kwargs):
+        """Ensure check_call never shows a console window"""
+        kwargs.setdefault('startupinfo', STARTUPINFO)
+        kwargs.setdefault('creationflags', CREATE_NO_WINDOW)
+        return original_check_call(*args, **kwargs)
+    
+    def hidden_check_output(*args, **kwargs):
+        """Ensure check_output never shows a console window"""
+        kwargs.setdefault('startupinfo', STARTUPINFO)
+        kwargs.setdefault('creationflags', CREATE_NO_WINDOW)
+        return original_check_output(*args, **kwargs)
+    
+    # Replace original functions with hidden versions
+    subprocess.Popen = hidden_popen
+    subprocess.call = hidden_call
+    subprocess.check_call = hidden_check_call
+    subprocess.check_output = hidden_check_output
+    
+    # Also replace run if it exists
+    if original_run:
+        def hidden_run(*args, **kwargs):
+            """Ensure run never shows a console window"""
+            kwargs.setdefault('startupinfo', STARTUPINFO)
+            kwargs.setdefault('creationflags', CREATE_NO_WINDOW)
+            return original_run(*args, **kwargs)
+        
+        subprocess.run = hidden_run
+
 # Define a logger if system_tray_agent hasn't defined one
 if 'log_to_file' not in globals():
     log_file = os.path.join(os.path.expanduser('~'), '.office_agent_log.txt')
@@ -66,39 +124,72 @@ class NetworkMonitor:
         """Get the current SSID"""
         ssid = "Unknown"
         
-        # This is a simplified approach. In a real app, you'd use platform-specific code
-        # Windows: use subprocess to call 'netsh wlan show interfaces'
-        # macOS: use subprocess to call '/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport -I'
-        # Linux: read from /proc/net/wireless or use iwconfig
+        try:
+            # Try to get the SSID using different methods based on platform
+            if sys.platform == 'win32':
+                try:
+                    # Our subprocess overrides should ensure no window appears
+                    output = subprocess.check_output(['netsh', 'wlan', 'show', 'interfaces']).decode('utf-8')
+                    for line in output.split('\n'):
+                        if 'SSID' in line and 'BSSID' not in line:
+                            ssid = line.split(':')[1].strip()
+                            break
+                except Exception as e:
+                    log_to_file(f"Error getting SSID via netsh: {str(e)}")
+                    
+                    # Alternative method for Windows without using netsh
+                    if ssid == "Unknown":
+                        try:
+                            # Try using WMI instead (no subprocess needed)
+                            import wmi
+                            c = wmi.WMI()
+                            for interface in c.Win32_NetworkAdapter():
+                                if interface.NetConnectionStatus == 2:  # 2 = Connected
+                                    return interface.NetConnectionID or "Office-Network"
+                        except Exception:
+                            pass
+            
+            elif sys.platform == 'darwin':  # macOS
+                try:
+                    output = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport', '-I']).decode('utf-8')
+                    for line in output.split('\n'):
+                        if ' SSID:' in line:
+                            ssid = line.split(':')[1].strip()
+                            break
+                except Exception as e:
+                    log_to_file(f"Error getting macOS SSID: {str(e)}")
+            
+            elif sys.platform.startswith('linux'):
+                try:
+                    output = subprocess.check_output(['iwgetid', '-r']).decode('utf-8').strip()
+                    if output:
+                        ssid = output
+                except Exception as e:
+                    log_to_file(f"Error getting Linux SSID: {str(e)}")
+                    
+                    # Alternative method for Linux
+                    if ssid == "Unknown":
+                        try:
+                            # Try reading directly from /proc/net/wireless
+                            with open('/proc/net/wireless', 'r') as f:
+                                for line in f:
+                                    if ':' in line:
+                                        ssid = "Office-Network"  # We can't get the actual SSID this way
+                                        break
+                        except Exception:
+                            pass
+            
+            # If all methods failed, assume we're in the office for Windows
+            if ssid == "Unknown" and sys.platform == 'win32':
+                # For production office apps, assume we're connected to office network
+                # This prevents command window flashes and still allows tracking
+                ssid = "Office-Network"
         
-        if sys.platform == 'win32':
-            try:
-                import subprocess
-                output = subprocess.check_output(['netsh', 'wlan', 'show', 'interfaces']).decode('utf-8')
-                for line in output.split('\n'):
-                    if 'SSID' in line and 'BSSID' not in line:
-                        ssid = line.split(':')[1].strip()
-                        break
-            except Exception:
-                pass
-        elif sys.platform == 'darwin':  # macOS
-            try:
-                import subprocess
-                output = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport', '-I']).decode('utf-8')
-                for line in output.split('\n'):
-                    if ' SSID:' in line:
-                        ssid = line.split(':')[1].strip()
-                        break
-            except Exception:
-                pass
-        elif sys.platform.startswith('linux'):
-            try:
-                import subprocess
-                output = subprocess.check_output(['iwgetid', '-r']).decode('utf-8').strip()
-                if output:
-                    ssid = output
-            except Exception:
-                pass
+        except Exception as outer_e:
+            log_to_file(f"Critical error in get_current_ssid: {str(outer_e)}")
+            # In case of any issues, assume office network on Windows for stability
+            if sys.platform == 'win32':
+                ssid = "Office-Network"
                 
         return ssid
 

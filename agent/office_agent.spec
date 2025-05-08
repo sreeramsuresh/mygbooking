@@ -1,26 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-block_cipher = None
+import sys
 
 a = Analysis(
-    ['system_tray_agent.py'],
-    pathex=['C:\Development\React\mygbooking\agent'],
+    ['office_agent_wrapper.py'],
+    pathex=[],
     binaries=[],
-    datas=[
-        ('C:\Development\React\mygbooking\agent\icon.ico', '.'),
-    ],
-    hiddenimports=['win32timezone'],
+    datas=[('icon.ico', '.')],
+    hiddenimports=['win32timezone', 'win32process', 'win32api'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
@@ -38,15 +33,15 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='C:\Development\React\mygbooking\agent\icon.ico',
-    version='version.txt',
+    icon=['icon.ico'],
+    # Set manifest to prevent command prompts
     uac_admin=False,
+    win_private_assemblies=True,
 )
 
 coll = COLLECT(
     exe,
     a.binaries,
-    a.zipfiles,
     a.datas,
     strip=False,
     upx=True,
