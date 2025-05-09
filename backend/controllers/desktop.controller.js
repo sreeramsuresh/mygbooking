@@ -7,6 +7,23 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const apiResponse = require("../utils/apiResponse");
 
+// Utility function to format dates in Indian Standard Time
+function formatDateTimeIST(date) {
+  if (!date) return null;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .format(date)
+    .replace(/\//g, "-");
+}
+
 /**
  * Handle desktop application login
  */
@@ -24,10 +41,14 @@ exports.desktopLogin = async (req, res) => {
 
     // Check if the network is GIGLABZ_5G for attendance tracking purposes
     const isOfficeNetwork = ssid === "GIGLABZ_5G";
-    
+
     // We'll record attendance for office network connections only
     // but allow connections from any network
-    console.log(`Login from SSID: ${ssid} - Office network: ${isOfficeNetwork ? 'Yes' : 'No'}`);
+    console.log(
+      `Login from SSID: ${ssid} - Office network: ${
+        isOfficeNetwork ? "Yes" : "No"
+      }`
+    );
 
     // Find user by email
     const user = await User.findOne({
@@ -176,13 +197,6 @@ exports.trackConnection = async (req, res) => {
       );
     }
 
-    // Check if the network is GIGLABZ_5G for attendance tracking purposes
-    const isOfficeNetwork = ssid === "GIGLABZ_5G";
-    
-    // We'll record attendance for office network connections only
-    // but allow connections from any network
-    console.log(`Login from SSID: ${ssid} - Office network: ${isOfficeNetwork ? 'Yes' : 'No'}`);
-
     // Find user by email
     const user = await User.findOne({
       where: { email },
@@ -225,31 +239,40 @@ exports.trackConnection = async (req, res) => {
         connectionStartTime: new Date(connection_start_time * 1000),
         isActive: true,
       });
-      
-      // If connected to office network, check if there's a booking for today
-      // and mark it as checked in if not already
+
+      // Check if this is a connection from the office network and correct IP range
       const isOfficeNetwork = ssid === "GIGLABZ_5G";
-      if (isOfficeNetwork) {
+      const isOfficeIPRange =
+        ip_address && ip_address.startsWith("192.168.100.");
+      const isValidOfficeConnection = isOfficeNetwork && isOfficeIPRange;
+
+      console.log(
+        `Login from SSID: ${ssid}, IP: ${ip_address} - Valid office connection: ${
+          isValidOfficeConnection ? "Yes" : "No"
+        }`
+      );
+
+      if (isValidOfficeConnection) {
         // Get today's date in YYYY-MM-DD format
-        const todayDate = new Date().toISOString().split('T')[0];
-        
+        const todayDate = new Date().toISOString().split("T")[0];
+
         // Find user's booking for today
         const Booking = db.booking;
         const todayBooking = await Booking.findOne({
           where: {
             userId: user.id,
             bookingDate: todayDate,
-            status: 'confirmed',
-            checkInTime: null // Not already checked in
-          }
+            status: "confirmed",
+            checkInTime: null, // Not already checked in
+          },
         });
-        
+
         // If booking exists, mark as checked in
         if (todayBooking) {
           await todayBooking.update({
-            checkInTime: new Date()
+            checkInTime: new Date(),
           });
-          
+
           // Log the attendance
           await db.auditLog.create({
             entityType: "booking",
@@ -257,13 +280,21 @@ exports.trackConnection = async (req, res) => {
             action: "check-in",
             performedBy: null, // System performed
             oldValues: { checkInTime: null },
-            newValues: { checkInTime: new Date() }
+            newValues: { checkInTime: new Date() },
           });
-          
-          console.log(`Auto check-in recorded for user ${user.email}, booking ID ${todayBooking.id}`);
+
+          console.log(
+            `Auto check-in recorded for user ${user.email}, booking ID ${todayBooking.id} (Office IP: ${ip_address})`
+          );
         } else {
-          console.log(`No active booking found for user ${user.email} on ${todayDate}`);
+          console.log(
+            `No active booking found for user ${user.email} on ${todayDate}`
+          );
         }
+      } else {
+        console.log(
+          `Connection from non-office network or IP range: ${ssid}, ${ip_address}`
+        );
       }
 
       // Update the session with the IP address
@@ -272,13 +303,15 @@ exports.trackConnection = async (req, res) => {
       });
     } else if (event_type === "heartbeat") {
       // Handle heartbeat event - just update the lastActivityAt timestamp
-      console.log(`Received heartbeat from ${user.email} at ${new Date().toISOString()}`);
-      
+      console.log(
+        `Received heartbeat from ${user.email} at ${new Date().toISOString()}`
+      );
+
       // Update the desktop session with the current time
       await desktopSession.update({
         lastActivityAt: new Date(),
       });
-      
+
       // Find the active connection record
       record = await AttendanceRecord.findOne({
         where: {
@@ -288,10 +321,12 @@ exports.trackConnection = async (req, res) => {
         },
         order: [["connectionStartTime", "DESC"]],
       });
-      
+
       if (!record) {
         // No active connection found, create a new one
-        console.log(`No active connection found for ${user.email}, creating new record`);
+        console.log(
+          `No active connection found for ${user.email}, creating new record`
+        );
         record = await AttendanceRecord.create({
           userId: user.id,
           ssid,
@@ -302,7 +337,7 @@ exports.trackConnection = async (req, res) => {
           isActive: true,
         });
       }
-      
+
       return apiResponse.success(res, "Heartbeat recorded successfully");
 
       // Also update or create any other active session records
@@ -486,11 +521,11 @@ exports.getActiveSessions = async (req, res) => {
         "Only administrators can view active desktop sessions"
       );
     }
-    
+
     // First run the auto cleanup to remove any stale sessions
     // Use a shorter timeout (5 minutes instead of 10) to clean up stale sessions more aggressively
     const cleanedCount = await autoCleanupInactiveSessions(5);
-    
+
     // Get all active desktop sessions with user details
     const activeSessions = await DesktopSession.findAll({
       where: { isActive: true },
@@ -503,7 +538,11 @@ exports.getActiveSessions = async (req, res) => {
       order: [["lastActivityAt", "DESC"]],
     });
 
-    console.log(`Found ${activeSessions.length} active desktop sessions${cleanedCount > 0 ? ` (cleaned up ${cleanedCount} stale sessions)` : ''}`);
+    console.log(
+      `Found ${activeSessions.length} active desktop sessions${
+        cleanedCount > 0 ? ` (cleaned up ${cleanedCount} stale sessions)` : ""
+      }`
+    );
 
     // Get attendance records for these sessions
     const sessionDetails = await Promise.all(
@@ -530,10 +569,9 @@ exports.getActiveSessions = async (req, res) => {
             connectionStartTime = Math.floor(
               latestRecord.connectionStartTime.getTime() / 1000
             );
-            connectionStartTimeFormatted = latestRecord.connectionStartTime
-              .toISOString()
-              .replace("T", " ")
-              .substring(0, 19);
+            connectionStartTimeFormatted = formatDateTimeIST(
+              latestRecord.connectionStartTime
+            );
 
             if (latestRecord.connectionDuration) {
               connectionDuration = latestRecord.connectionDuration;
@@ -621,6 +659,7 @@ exports.getActiveSessions = async (req, res) => {
                 }
               : null,
             lastActivityAt: session.lastActivityAt,
+            lastActivityAtFormatted: formatDateTimeIST(session.lastActivityAt),
           };
         } catch (err) {
           console.error("Error processing session details:", err);
@@ -654,40 +693,43 @@ exports.cleanupInactiveSessions = async (req, res) => {
   try {
     // Check if user has admin permission to perform this action
     if (
-      !req.userRoles || (!req.userRoles.includes("ROLE_ADMIN") &&
-      !req.userRoles.includes("admin"))
+      !req.userRoles ||
+      (!req.userRoles.includes("ROLE_ADMIN") &&
+        !req.userRoles.includes("admin"))
     ) {
       return apiResponse.forbidden(
         res,
         "Only administrators can manually clean up inactive sessions"
       );
     }
-    
+
     // Calculate cutoff time (5 minutes ago - using a shorter timeout for quicker cleanup)
     const fiveMinutesAgo = new Date();
     fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-    
+
     // Find active sessions that haven't been updated in the last 5 minutes
     const outdatedSessions = await DesktopSession.findAll({
       where: {
         isActive: true,
         lastActivityAt: {
-          [db.Sequelize.Op.lt]: fiveMinutesAgo
-        }
+          [db.Sequelize.Op.lt]: fiveMinutesAgo,
+        },
       },
       include: [
         {
           model: db.user,
-          attributes: ['id', 'username', 'email']
-        }
-      ]
+          attributes: ["id", "username", "email"],
+        },
+      ],
     });
-    
-    console.log(`Found ${outdatedSessions.length} inactive sessions older than 5 minutes`);
-    
+
+    console.log(
+      `Found ${outdatedSessions.length} inactive sessions older than 5 minutes`
+    );
+
     // Process each outdated session
     const processedSessions = [];
-    
+
     for (const session of outdatedSessions) {
       try {
         // Find active attendance records for this session
@@ -695,53 +737,57 @@ exports.cleanupInactiveSessions = async (req, res) => {
           where: {
             userId: session.userId,
             macAddress: session.macAddress,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
-        
+
         // Mark attendance records as inactive
         for (const record of activeRecords) {
           const now = new Date();
-          const duration = (now.getTime() - record.connectionStartTime.getTime()) / 1000;
-          
+          const duration =
+            (now.getTime() - record.connectionStartTime.getTime()) / 1000;
+
           await record.update({
             connectionEndTime: now,
             connectionDuration: duration,
-            isActive: false
+            isActive: false,
           });
-          
-          console.log(`Marked attendance record ${record.id} for user ${session.user?.email || session.userId} as inactive (duration: ${duration}s)`);
+
+          console.log(
+            `Marked attendance record ${record.id} for user ${
+              session.user?.email || session.userId
+            } as inactive (duration: ${duration}s)`
+          );
         }
-        
+
         // Mark the session as inactive
         await session.update({
-          isActive: false
+          isActive: false,
         });
-        
+
         processedSessions.push({
           id: session.id,
           userId: session.userId,
-          email: session.user?.email || 'Unknown',
+          email: session.user?.email || "Unknown",
           lastActivity: session.lastActivityAt,
-          recordsUpdated: activeRecords.length
+          lastActivityFormatted: formatDateTimeIST(session.lastActivityAt),
+          recordsUpdated: activeRecords.length,
         });
-        
       } catch (err) {
         console.error(`Error processing session ${session.id}:`, err);
       }
     }
-    
+
     return apiResponse.success(
-      res, 
+      res,
       `Successfully cleaned up ${processedSessions.length} inactive sessions`,
       {
         processedSessions,
-        totalFound: outdatedSessions.length
+        totalFound: outdatedSessions.length,
       }
     );
-    
   } catch (error) {
-    console.error('Error cleaning up inactive sessions:', error);
+    console.error("Error cleaning up inactive sessions:", error);
     return apiResponse.serverError(res, error);
   }
 };
@@ -755,19 +801,21 @@ const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
     // Calculate cutoff time based on provided timeout (default 10 minutes)
     const cutoffTime = new Date();
     cutoffTime.setMinutes(cutoffTime.getMinutes() - timeoutMinutes);
-    
+
     // Find active sessions that haven't been updated in the specified time
     const outdatedSessions = await DesktopSession.findAll({
       where: {
         isActive: true,
         lastActivityAt: {
-          [db.Sequelize.Op.lt]: cutoffTime
-        }
-      }
+          [db.Sequelize.Op.lt]: cutoffTime,
+        },
+      },
     });
-    
-    console.log(`Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than ${timeoutMinutes} minutes`);
-    
+
+    console.log(
+      `Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than ${timeoutMinutes} minutes`
+    );
+
     // Process each outdated session
     for (const session of outdatedSessions) {
       try {
@@ -776,37 +824,42 @@ const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
           where: {
             userId: session.userId,
             macAddress: session.macAddress,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
-        
+
         // Mark attendance records as inactive
         for (const record of activeRecords) {
           const now = new Date();
-          const duration = (now.getTime() - record.connectionStartTime.getTime()) / 1000;
-          
+          const duration =
+            (now.getTime() - record.connectionStartTime.getTime()) / 1000;
+
           await record.update({
             connectionEndTime: now,
             connectionDuration: duration,
-            isActive: false
+            isActive: false,
           });
-          
-          console.log(`Auto cleanup: Marked attendance record ${record.id} for user ${session.userId} as inactive (duration: ${duration}s)`);
+
+          console.log(
+            `Auto cleanup: Marked attendance record ${record.id} for user ${session.userId} as inactive (duration: ${duration}s)`
+          );
         }
-        
+
         // Mark the session as inactive
         await session.update({
-          isActive: false
+          isActive: false,
         });
-        
       } catch (err) {
-        console.error(`Auto cleanup: Error processing session ${session.id}:`, err);
+        console.error(
+          `Auto cleanup: Error processing session ${session.id}:`,
+          err
+        );
       }
     }
-    
+
     return outdatedSessions.length;
   } catch (error) {
-    console.error('Auto cleanup: Error cleaning up inactive sessions:', error);
+    console.error("Auto cleanup: Error cleaning up inactive sessions:", error);
     return 0;
   }
 };
@@ -911,17 +964,11 @@ exports.getAttendanceHistory = async (req, res) => {
         computerName: record.computerName,
         connectionStartTime: record.connectionStartTime,
         connectionStartTimeFormatted: record.connectionStartTime
-          ? record.connectionStartTime
-              .toISOString()
-              .replace("T", " ")
-              .substring(0, 19)
+          ? formatDateTimeIST(record.connectionStartTime)
           : null,
         connectionEndTime: record.connectionEndTime,
         connectionEndTimeFormatted: record.connectionEndTime
-          ? record.connectionEndTime
-              .toISOString()
-              .replace("T", " ")
-              .substring(0, 19)
+          ? formatDateTimeIST(record.connectionEndTime)
           : null,
         connectionDuration: record.connectionDuration,
         connectionDurationFormatted: durationFormatted,
