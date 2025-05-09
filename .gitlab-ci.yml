@@ -4,7 +4,7 @@ stages:
 deploy:
   stage: deploy
   only:
-    - main # or master, depending on your default branch
+    - dev # or master, depending on your default branch
   script:
     - echo "Deploying application..."
     - mkdir -p ~/.ssh
