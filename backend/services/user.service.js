@@ -434,7 +434,11 @@ const updateProfile = async (userId, updates) => {
     }
 
     // Verify old password if changing password
-    if (updates.password && updates.oldPassword) {
+    if (updates.password) {
+      if (!updates.oldPassword) {
+        throw new Error("Old password is required when changing password");
+      }
+      
       const isValidPassword = bcrypt.compareSync(
         updates.oldPassword,
         user.password
