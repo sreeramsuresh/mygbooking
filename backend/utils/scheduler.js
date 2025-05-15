@@ -203,6 +203,24 @@ async function processAutoBookingsForAllUsers() {
 }
 
 function initScheduler() {
+  // Run desktop session cleanup job every 20 minutes to detect and close stale sessions
+  cron.schedule("*/20 * * * *", async () => {
+    logger.info("Running automated desktop session cleanup job");
+    
+    try {
+      const desktopController = require("../controllers/desktop.controller");
+      // First param: inactivity timeout in minutes (5 minutes)
+      // Second param: log details (false for less verbose logs)
+      const cleanedCount = await desktopController.autoCleanupInactiveSessions(5, false);
+      
+      if (cleanedCount > 0) {
+        logger.info(`Cleaned up ${cleanedCount} stale desktop sessions`);
+      }
+    } catch (error) {
+      logger.error("Desktop session cleanup job failed:", error);
+    }
+  });
+
   // Cancel bookings for users who haven't checked in by 10:30 AM
   cron.schedule("30 10 * * 1-5", async () => {
     logger.info(

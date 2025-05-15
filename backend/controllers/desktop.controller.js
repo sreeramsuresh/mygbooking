@@ -215,7 +215,7 @@ exports.trackConnection = async (req, res) => {
       },
     });
 
-    if (!desktopSession) {
+    if (!desktopSession && event_type !== "connect") {
       return apiResponse.badRequest(
         res,
         "No active session found for this device"
@@ -229,6 +229,39 @@ exports.trackConnection = async (req, res) => {
     let record;
 
     if (event_type === "connect") {
+      // Check for any existing active connection records for this user/device and close them first
+      // This prevents duplicate active connections when changing networks
+      const existingActiveRecords = await AttendanceRecord.findAll({
+        where: {
+          userId: user.id,
+          macAddress: mac_address,
+          isActive: true,
+        },
+      });
+
+      // Close any existing active records before creating a new one
+      if (existingActiveRecords.length > 0) {
+        console.log(`Found ${existingActiveRecords.length} existing active records for ${user.email} - closing them first`);
+        
+        for (const oldRecord of existingActiveRecords) {
+          // Calculate duration
+          const now = new Date();
+          const duration = (now.getTime() - oldRecord.connectionStartTime.getTime()) / 1000;
+
+          // Update the record
+          await oldRecord.update({
+            connectionEndTime: now,
+            connectionDuration: duration,
+            isActive: false,
+            ssid: ssid, // Update with current SSID to show what network they switched to
+          });
+
+          console.log(
+            `Closed existing attendance record ${oldRecord.id} with duration ${duration} seconds before new connection`
+          );
+        }
+      }
+
       // Create a new connection record
       record = await AttendanceRecord.create({
         userId: user.id,
@@ -236,9 +269,11 @@ exports.trackConnection = async (req, res) => {
         ipAddress: ip_address,
         macAddress: mac_address,
         computerName: computer_name,
-        connectionStartTime: new Date(connection_start_time * 1000),
+        connectionStartTime: new Date(connection_start_time * 1000 || Date.now()),
         isActive: true,
       });
+
+      console.log(`Created new connection record ${record.id} for user ${user.email} on network ${ssid}`);
 
       // Check if this is a connection from the office network and correct IP range
       const isOfficeNetwork = ssid === "GIGLABZ_5G";
@@ -297,19 +332,40 @@ exports.trackConnection = async (req, res) => {
         );
       }
 
-      // Update the session with the IP address
-      await desktopSession.update({
-        lastActivityAt: new Date(),
-      });
+      // Create or update the desktop session
+      if (desktopSession) {
+        await desktopSession.update({
+          ssid: ssid,  // Update SSID to current value
+          lastActivityAt: new Date(),
+        });
+      } else {
+        // If no active session exists, create it (might happen if reconnecting after cleanup)
+        const token = jwt.sign(
+          { id: user.id, isDesktopClient: true },
+          config.secret
+        );
+        
+        await DesktopSession.create({
+          userId: user.id,
+          macAddress: mac_address,
+          ssid: ssid,
+          token: token,
+          isActive: true,
+          lastActivityAt: new Date(),
+        });
+        
+        console.log(`Created new desktop session for user ${user.email} on network ${ssid}`);
+      }
     } else if (event_type === "heartbeat") {
       // Handle heartbeat event - just update the lastActivityAt timestamp
       console.log(
         `Received heartbeat from ${user.email} at ${new Date().toISOString()}`
       );
 
-      // Update the desktop session with the current time
+      // Update the desktop session with the current time and SSID
       await desktopSession.update({
         lastActivityAt: new Date(),
+        ssid: ssid,  // Update SSID in case it changed
       });
 
       // Find the active connection record
@@ -336,47 +392,16 @@ exports.trackConnection = async (req, res) => {
           connectionStartTime: new Date(),
           isActive: true,
         });
+      } else if (record.ssid !== ssid) {
+        // SSID has changed since the record was created - update it
+        console.log(`SSID changed from ${record.ssid} to ${ssid} for record ${record.id} - updating`);
+        await record.update({
+          ssid: ssid,
+          ipAddress: ip_address,  // Also update IP address
+        });
       }
 
       return apiResponse.success(res, "Heartbeat recorded successfully");
-
-      // Also update or create any other active session records
-      const activeRecords = await AttendanceRecord.findAll({
-        where: {
-          userId: user.id,
-          macAddress: mac_address,
-          isActive: true,
-          id: { [db.Sequelize.Op.ne]: record.id },
-        },
-      });
-
-      // Close any other active records for this user/device
-      if (activeRecords.length > 0) {
-        console.log(
-          `Found ${activeRecords.length} other active records for this user/device`
-        );
-        for (const oldRecord of activeRecords) {
-          // Calculate duration
-          const now = new Date();
-          const duration =
-            (now.getTime() - oldRecord.connectionStartTime.getTime()) / 1000;
-
-          // Update the record
-          await oldRecord.update({
-            connectionEndTime: now,
-            connectionDuration: duration,
-            isActive: false,
-          });
-
-          console.log(
-            `Closed old attendance record ${oldRecord.id} with duration ${duration} seconds`
-          );
-        }
-      }
-
-      return apiResponse.success(res, "Connection recorded successfully", {
-        recordId: record.id,
-      });
     } else if (event_type === "disconnect") {
       // Find the active connection record
       record = await AttendanceRecord.findOne({
@@ -402,6 +427,8 @@ exports.trackConnection = async (req, res) => {
         isActive: false,
       });
 
+      console.log(`Disconnected user ${user.email} from ${ssid} after ${connection_duration_formatted}`);
+
       return apiResponse.success(res, "Disconnection recorded successfully", {
         recordId: record.id,
         duration: connection_duration_formatted,
@@ -409,7 +436,13 @@ exports.trackConnection = async (req, res) => {
     } else {
       return apiResponse.badRequest(res, "Invalid event type");
     }
+
+    // Default success response for non-heartbeat events
+    return apiResponse.success(res, `${event_type} event recorded successfully`, {
+      recordId: record?.id,
+    });
   } catch (error) {
+    console.error("Error in trackConnection:", error);
     return apiResponse.serverError(res, error);
   }
 };
@@ -523,8 +556,8 @@ exports.getActiveSessions = async (req, res) => {
     }
 
     // First run the auto cleanup to remove any stale sessions
-    // Use a shorter timeout (5 minutes instead of 10) to clean up stale sessions more aggressively
-    const cleanedCount = await autoCleanupInactiveSessions(5);
+    // Use a 5 minute timeout to clean up stale sessions
+    const cleanedCount = await exports.autoCleanupInactiveSessions(5, true);
 
     // Get all active desktop sessions with user details
     const activeSessions = await DesktopSession.findAll({
@@ -703,7 +736,7 @@ exports.cleanupInactiveSessions = async (req, res) => {
       );
     }
 
-    // Calculate cutoff time (5 minutes ago - using a shorter timeout for quicker cleanup)
+    // Calculate cutoff time (5 minutes ago)
     const fiveMinutesAgo = new Date();
     fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
@@ -793,12 +826,14 @@ exports.cleanupInactiveSessions = async (req, res) => {
 };
 
 /**
- * This function runs automatically during getActiveSessions to clean up stale sessions
- * @param {number} timeoutMinutes - Number of minutes without activity before a session is considered inactive (default: 10)
+ * This function runs automatically to clean up stale sessions
+ * @param {number} timeoutMinutes - Number of minutes without activity before a session is considered inactive (default: 5)
+ * @param {boolean} logDetails - Whether to log detailed information about cleanup
+ * @returns {Promise<number>} - The number of cleaned up sessions
  */
-const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
+exports.autoCleanupInactiveSessions = async (timeoutMinutes = 5, logDetails = true) => {
   try {
-    // Calculate cutoff time based on provided timeout (default 10 minutes)
+    // Calculate cutoff time based on provided timeout
     const cutoffTime = new Date();
     cutoffTime.setMinutes(cutoffTime.getMinutes() - timeoutMinutes);
 
@@ -810,11 +845,19 @@ const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
           [db.Sequelize.Op.lt]: cutoffTime,
         },
       },
+      include: [
+        {
+          model: User,
+          attributes: ['email', 'username', 'fullName'],
+        },
+      ],
     });
 
-    console.log(
-      `Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than ${timeoutMinutes} minutes`
-    );
+    if (logDetails) {
+      console.log(
+        `Auto cleanup: Found ${outdatedSessions.length} inactive sessions older than ${timeoutMinutes} minutes`
+      );
+    }
 
     // Process each outdated session
     for (const session of outdatedSessions) {
@@ -831,18 +874,40 @@ const autoCleanupInactiveSessions = async (timeoutMinutes = 10) => {
         // Mark attendance records as inactive
         for (const record of activeRecords) {
           const now = new Date();
-          const duration =
-            (now.getTime() - record.connectionStartTime.getTime()) / 1000;
-
-          await record.update({
-            connectionEndTime: now,
-            connectionDuration: duration,
-            isActive: false,
-          });
-
-          console.log(
-            `Auto cleanup: Marked attendance record ${record.id} for user ${session.userId} as inactive (duration: ${duration}s)`
-          );
+          // Calculate a more reasonable duration by capping it to max of 8 hours
+          // if the duration is suspiciously long (device likely disconnected without notice)
+          let duration = (now.getTime() - record.connectionStartTime.getTime()) / 1000;
+          
+          // If session duration is over 8 hours (28800 seconds), cap it and set end time to start + 8 hours
+          // This prevents unrealistically long durations
+          if (duration > 28800) {
+            duration = 28800; // 8 hours in seconds
+            const adjustedEndTime = new Date(record.connectionStartTime.getTime() + 28800000); // 8 hours in ms
+            
+            await record.update({
+              connectionEndTime: adjustedEndTime,
+              connectionDuration: duration,
+              isActive: false,
+            });
+            
+            if (logDetails) {
+              console.log(
+                `Auto cleanup: Capped excessive duration for record ${record.id} for user ${session.user ? session.user.email : session.userId} (capped to 8 hours)`
+              );
+            }
+          } else {
+            await record.update({
+              connectionEndTime: now,
+              connectionDuration: duration,
+              isActive: false,
+            });
+            
+            if (logDetails) {
+              console.log(
+                `Auto cleanup: Marked attendance record ${record.id} for user ${session.user ? session.user.email : session.userId} as inactive (duration: ${Math.floor(duration / 60)}m)`
+              );
+            }
+          }
         }
 
         // Mark the session as inactive

@@ -5,5 +5,5 @@ export const API_URL =
     ? "/api"
     : //
       // "http://192.168.1.8:9600/api";
-      // "http://localhost:9600/api";
-      "https://gbooking.giglabz.co.in/api";
+      "http://localhost:9600/api";
+// "https://gbooking.giglabz.co.in/api";

@@ -854,3 +854,318 @@
 2025-05-08T10:29:52.084Z info: User 5 has existing booking on 2025-05-23
 2025-05-08T10:29:52.085Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
 2025-05-08T10:29:52.085Z info: Initial auto-booking process completed successfully
+2025-05-14T01:56:12.663Z info: Checking database structure...
+2025-05-14T01:56:15.294Z info: Database synchronized successfully.
+2025-05-14T01:56:15.323Z info: Roles already exist, skipping seed.
+2025-05-14T01:56:15.338Z info: Users already exist, skipping admin user creation.
+2025-05-14T01:56:15.356Z info: Seats already exist, skipping seat creation.
+2025-05-14T01:56:15.375Z info: All users have valid auto-booking preferences
+2025-05-14T01:56:15.382Z info: Database initialization completed successfully.
+2025-05-14T01:56:15.400Z info: Scheduler initialized successfully
+2025-05-14T01:56:15.426Z info: Server is running on port 9600
+2025-05-14T01:56:25.413Z info: Running initial auto-booking process at startup
+2025-05-14T01:56:25.414Z info: Starting auto-booking process for all users
+2025-05-14T01:56:25.420Z info: Found 1 admin users to exclude from auto-booking
+2025-05-14T01:56:25.423Z info: Found 3 active users to process
+2025-05-14T01:56:25.424Z info: Processing user 2 (sreeram.s)
+2025-05-14T01:56:25.424Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-05-14T01:56:25.425Z info: Checking existing bookings for user 2 from 2025-05-26 to 2025-06-11
+2025-05-14T01:56:25.448Z info: User 2 already has 13 future bookings between 2025-05-26 and 2025-06-11 - skipping
+2025-05-14T01:56:25.448Z info: User 2 has existing booking on 2025-05-26
+2025-05-14T01:56:25.448Z info: User 2 has existing booking on 2025-05-27
+2025-05-14T01:56:25.449Z info: User 2 has existing booking on 2025-05-28
+2025-05-14T01:56:25.449Z info: User 2 has existing booking on 2025-05-29
+2025-05-14T01:56:25.449Z info: User 2 has existing booking on 2025-05-30
+2025-05-14T01:56:25.449Z info: User 2 has existing booking on 2025-06-02
+2025-05-14T01:56:25.450Z info: User 2 has existing booking on 2025-06-03
+2025-05-14T01:56:25.450Z info: User 2 has existing booking on 2025-06-04
+2025-05-14T01:56:25.450Z info: User 2 has existing booking on 2025-06-05
+2025-05-14T01:56:25.450Z info: User 2 has existing booking on 2025-06-06
+2025-05-14T01:56:25.451Z info: User 2 has existing booking on 2025-06-09
+2025-05-14T01:56:25.451Z info: User 2 has existing booking on 2025-06-10
+2025-05-14T01:56:25.451Z info: User 2 has existing booking on 2025-06-11
+2025-05-14T01:56:25.451Z info: Processing user 5 (anand.vp)
+2025-05-14T01:56:25.451Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-05-14T01:56:25.452Z info: Checking existing bookings for user 5 from 2025-05-26 to 2025-06-11
+2025-05-14T01:56:25.455Z info: User 5 already has 5 future bookings between 2025-05-26 and 2025-06-11 - skipping
+2025-05-14T01:56:25.456Z info: User 5 has existing booking on 2025-05-26
+2025-05-14T01:56:25.456Z info: User 5 has existing booking on 2025-05-30
+2025-05-14T01:56:25.456Z info: User 5 has existing booking on 2025-06-02
+2025-05-14T01:56:25.456Z info: User 5 has existing booking on 2025-06-06
+2025-05-14T01:56:25.457Z info: User 5 has existing booking on 2025-06-09
+2025-05-14T01:56:25.457Z info: Processing user 4 (sarath.h)
+2025-05-14T01:56:25.457Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-05-14T01:56:25.457Z info: Checking existing bookings for user 4 from 2025-05-26 to 2025-06-11
+2025-05-14T01:56:25.461Z info: User 4 already has 4 future bookings between 2025-05-26 and 2025-06-11 - skipping
+2025-05-14T01:56:25.461Z info: User 4 has existing booking on 2025-05-29
+2025-05-14T01:56:25.462Z info: User 4 has existing booking on 2025-05-30
+2025-05-14T01:56:25.462Z info: User 4 has existing booking on 2025-06-05
+2025-05-14T01:56:25.462Z info: User 4 has existing booking on 2025-06-06
+2025-05-14T01:56:25.462Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-14T01:56:25.463Z info: Initial auto-booking process completed successfully
+2025-05-14T02:10:00.436Z info: Running automated desktop session cleanup job
+2025-05-14T02:10:00.599Z info: Cleaned up 1 stale desktop sessions
+2025-05-14T02:30:00.178Z info: Running automated desktop session cleanup job
+2025-05-15T04:02:59.363Z info: Checking database structure...
+2025-05-15T04:03:01.690Z info: Database synchronized successfully.
+2025-05-15T04:03:01.721Z info: Roles already exist, skipping seed.
+2025-05-15T04:03:01.726Z info: Users already exist, skipping admin user creation.
+2025-05-15T04:03:01.731Z info: Seats already exist, skipping seat creation.
+2025-05-15T04:03:01.750Z info: All users have valid auto-booking preferences
+2025-05-15T04:03:01.751Z info: Database initialization completed successfully.
+2025-05-15T04:03:01.765Z info: Scheduler initialized successfully
+2025-05-15T04:03:01.784Z info: Server is running on port 9600
+2025-05-15T04:03:11.775Z info: Running initial auto-booking process at startup
+2025-05-15T04:03:11.777Z info: Starting auto-booking process for all users
+2025-05-15T04:03:11.798Z info: Found 1 admin users to exclude from auto-booking
+2025-05-15T04:03:11.807Z info: Found 3 active users to process
+2025-05-15T04:03:11.808Z info: Processing user 2 (sreeram.s)
+2025-05-15T04:03:11.808Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-05-15T04:03:11.809Z info: Checking existing bookings for user 2 from 2025-05-26 to 2025-06-12
+2025-05-15T04:03:11.857Z info: User 2 already has 14 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T04:03:11.858Z info: User 2 has existing booking on 2025-05-26
+2025-05-15T04:03:11.859Z info: User 2 has existing booking on 2025-05-27
+2025-05-15T04:03:11.859Z info: User 2 has existing booking on 2025-05-28
+2025-05-15T04:03:11.860Z info: User 2 has existing booking on 2025-05-29
+2025-05-15T04:03:11.860Z info: User 2 has existing booking on 2025-05-30
+2025-05-15T04:03:11.861Z info: User 2 has existing booking on 2025-06-02
+2025-05-15T04:03:11.861Z info: User 2 has existing booking on 2025-06-03
+2025-05-15T04:03:11.862Z info: User 2 has existing booking on 2025-06-04
+2025-05-15T04:03:11.862Z info: User 2 has existing booking on 2025-06-05
+2025-05-15T04:03:11.863Z info: User 2 has existing booking on 2025-06-06
+2025-05-15T04:03:11.864Z info: User 2 has existing booking on 2025-06-09
+2025-05-15T04:03:11.865Z info: User 2 has existing booking on 2025-06-10
+2025-05-15T04:03:11.865Z info: User 2 has existing booking on 2025-06-11
+2025-05-15T04:03:11.866Z info: User 2 has existing booking on 2025-06-12
+2025-05-15T04:03:11.867Z info: Processing user 5 (anand.vp)
+2025-05-15T04:03:11.868Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-05-15T04:03:11.868Z info: Checking existing bookings for user 5 from 2025-05-26 to 2025-06-12
+2025-05-15T04:03:11.881Z info: User 5 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T04:03:11.882Z info: User 5 has existing booking on 2025-05-26
+2025-05-15T04:03:11.882Z info: User 5 has existing booking on 2025-05-30
+2025-05-15T04:03:11.883Z info: User 5 has existing booking on 2025-06-02
+2025-05-15T04:03:11.883Z info: User 5 has existing booking on 2025-06-06
+2025-05-15T04:03:11.883Z info: User 5 has existing booking on 2025-06-09
+2025-05-15T04:03:11.884Z info: Processing user 4 (sarath.h)
+2025-05-15T04:03:11.884Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-05-15T04:03:11.885Z info: Checking existing bookings for user 4 from 2025-05-26 to 2025-06-12
+2025-05-15T04:03:11.894Z info: User 4 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T04:03:11.894Z info: User 4 has existing booking on 2025-05-29
+2025-05-15T04:03:11.895Z info: User 4 has existing booking on 2025-05-30
+2025-05-15T04:03:11.895Z info: User 4 has existing booking on 2025-06-05
+2025-05-15T04:03:11.896Z info: User 4 has existing booking on 2025-06-06
+2025-05-15T04:03:11.897Z info: User 4 has existing booking on 2025-06-12
+2025-05-15T04:03:11.898Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-15T04:03:11.899Z info: Initial auto-booking process completed successfully
+2025-05-15T04:10:00.757Z info: Running automated desktop session cleanup job
+2025-05-15T04:10:23.977Z info: Creating auto bookings for user 1 (admin) with:
+2025-05-15T04:10:23.982Z info: - Default work days: [1,2,3,4,5]
+2025-05-15T04:10:23.997Z info: - Required days per week: 5
+2025-05-15T04:10:23.998Z info: - Days that will be booked: [1,2,3,4,5]
+2025-05-15T04:10:24.016Z info: Checking existing bookings for user 1 from 2025-05-15 to 2025-06-12
+2025-05-15T04:10:24.063Z info: Processing week 1 (offset 0) starting 2025-05-19
+2025-05-15T04:10:24.076Z info: Week 1: Attempting to book day 1 (Mon) on 2025-05-19
+2025-05-15T04:10:24.124Z info: User 1 already has booking ID 44 for date 2025-05-19 - skipping
+2025-05-15T04:10:24.130Z info: Week 1: Attempting to book day 2 (Tue) on 2025-05-20
+2025-05-15T04:10:24.165Z info: User 1 already has booking ID 45 for date 2025-05-20 - skipping
+2025-05-15T04:10:24.190Z info: Week 1: Attempting to book day 3 (Wed) on 2025-05-21
+2025-05-15T04:10:24.243Z info: User 1 already has booking ID 46 for date 2025-05-21 - skipping
+2025-05-15T04:10:24.273Z info: Week 1: Attempting to book day 4 (Thu) on 2025-05-22
+2025-05-15T04:10:24.313Z info: User 1 already has booking ID 47 for date 2025-05-22 - skipping
+2025-05-15T04:10:24.342Z info: Week 1: Attempting to book day 5 (Fri) on 2025-05-23
+2025-05-15T04:10:24.377Z info: User 1 already has booking ID 48 for date 2025-05-23 - skipping
+2025-05-15T04:10:24.393Z info: Processing week 2 (offset 1) starting 2025-05-26
+2025-05-15T04:10:24.409Z info: Week 2: Attempting to book day 1 (Mon) on 2025-05-26
+2025-05-15T04:10:24.476Z info: Looking for available seats on 2025-05-26
+2025-05-15T04:10:24.627Z info: Found 8 available seats for date 2025-05-26
+2025-05-15T04:10:24.643Z info: Creating auto-booking for user 1, seat 3, date 2025-05-26
+2025-05-15T04:10:24.730Z info: Auto-booking created successfully with ID 93
+2025-05-15T04:10:24.795Z info: Week 2: Attempting to book day 2 (Tue) on 2025-05-27
+2025-05-15T04:10:24.828Z info: Looking for available seats on 2025-05-27
+2025-05-15T04:10:24.998Z info: Found 9 available seats for date 2025-05-27
+2025-05-15T04:10:25.024Z info: Creating auto-booking for user 1, seat 2, date 2025-05-27
+2025-05-15T04:10:25.066Z info: Auto-booking created successfully with ID 94
+2025-05-15T04:10:25.108Z info: Week 2: Attempting to book day 3 (Wed) on 2025-05-28
+2025-05-15T04:10:25.144Z info: Looking for available seats on 2025-05-28
+2025-05-15T04:10:25.183Z info: Found 9 available seats for date 2025-05-28
+2025-05-15T04:10:25.183Z info: Creating auto-booking for user 1, seat 2, date 2025-05-28
+2025-05-15T04:10:25.198Z info: Auto-booking created successfully with ID 95
+2025-05-15T04:10:25.209Z info: Week 2: Attempting to book day 4 (Thu) on 2025-05-29
+2025-05-15T04:10:25.212Z info: Looking for available seats on 2025-05-29
+2025-05-15T04:10:25.278Z info: Found 8 available seats for date 2025-05-29
+2025-05-15T04:10:25.279Z info: Creating auto-booking for user 1, seat 3, date 2025-05-29
+2025-05-15T04:10:25.299Z info: Auto-booking created successfully with ID 96
+2025-05-15T04:10:25.321Z info: Week 2: Attempting to book day 5 (Fri) on 2025-05-30
+2025-05-15T04:10:25.341Z info: Looking for available seats on 2025-05-30
+2025-05-15T04:10:25.398Z info: Found 7 available seats for date 2025-05-30
+2025-05-15T04:10:25.411Z info: Creating auto-booking for user 1, seat 4, date 2025-05-30
+2025-05-15T04:10:25.431Z info: Auto-booking created successfully with ID 97
+2025-05-15T04:10:25.458Z info: Processing week 3 (offset 2) starting 2025-06-02
+2025-05-15T04:10:25.463Z info: Week 3: Attempting to book day 1 (Mon) on 2025-06-02
+2025-05-15T04:10:25.481Z info: Looking for available seats on 2025-06-02
+2025-05-15T04:10:25.561Z info: Found 8 available seats for date 2025-06-02
+2025-05-15T04:10:25.580Z info: Creating auto-booking for user 1, seat 3, date 2025-06-02
+2025-05-15T04:10:25.617Z info: Auto-booking created successfully with ID 98
+2025-05-15T04:10:25.646Z info: Week 3: Attempting to book day 2 (Tue) on 2025-06-03
+2025-05-15T04:10:25.681Z info: Looking for available seats on 2025-06-03
+2025-05-15T04:10:25.832Z info: Found 9 available seats for date 2025-06-03
+2025-05-15T04:10:25.846Z info: Creating auto-booking for user 1, seat 2, date 2025-06-03
+2025-05-15T04:10:25.882Z info: Auto-booking created successfully with ID 99
+2025-05-15T04:10:25.915Z info: Week 3: Attempting to book day 3 (Wed) on 2025-06-04
+2025-05-15T04:10:25.941Z info: Looking for available seats on 2025-06-04
+2025-05-15T04:10:26.127Z info: Found 9 available seats for date 2025-06-04
+2025-05-15T04:10:26.133Z info: Creating auto-booking for user 1, seat 2, date 2025-06-04
+2025-05-15T04:10:26.151Z info: Auto-booking created successfully with ID 100
+2025-05-15T04:10:26.177Z info: Week 3: Attempting to book day 4 (Thu) on 2025-06-05
+2025-05-15T04:10:26.199Z info: Looking for available seats on 2025-06-05
+2025-05-15T04:10:26.291Z info: Found 8 available seats for date 2025-06-05
+2025-05-15T04:10:26.298Z info: Creating auto-booking for user 1, seat 3, date 2025-06-05
+2025-05-15T04:10:26.335Z info: Auto-booking created successfully with ID 101
+2025-05-15T04:10:26.393Z info: Week 3: Attempting to book day 5 (Fri) on 2025-06-06
+2025-05-15T04:10:26.417Z info: Looking for available seats on 2025-06-06
+2025-05-15T04:10:26.543Z info: Found 7 available seats for date 2025-06-06
+2025-05-15T04:10:26.551Z info: Creating auto-booking for user 1, seat 4, date 2025-06-06
+2025-05-15T04:10:26.584Z info: Auto-booking created successfully with ID 102
+2025-05-15T04:10:26.643Z info: Processing week 4 (offset 3) starting 2025-06-09
+2025-05-15T04:10:26.661Z info: Week 4: Attempting to book day 1 (Mon) on 2025-06-09
+2025-05-15T04:10:26.708Z info: Looking for available seats on 2025-06-09
+2025-05-15T04:10:26.812Z info: Found 8 available seats for date 2025-06-09
+2025-05-15T04:10:26.815Z info: Creating auto-booking for user 1, seat 3, date 2025-06-09
+2025-05-15T04:10:26.826Z info: Auto-booking created successfully with ID 103
+2025-05-15T04:10:26.833Z info: Week 4: Attempting to book day 2 (Tue) on 2025-06-10
+2025-05-15T04:10:26.842Z info: Looking for available seats on 2025-06-10
+2025-05-15T04:10:26.860Z info: Found 9 available seats for date 2025-06-10
+2025-05-15T04:10:26.860Z info: Creating auto-booking for user 1, seat 2, date 2025-06-10
+2025-05-15T04:10:26.866Z info: Auto-booking created successfully with ID 104
+2025-05-15T04:10:26.880Z info: Week 4: Attempting to book day 3 (Wed) on 2025-06-11
+2025-05-15T04:10:26.883Z info: Looking for available seats on 2025-06-11
+2025-05-15T04:10:26.900Z info: Found 9 available seats for date 2025-06-11
+2025-05-15T04:10:26.901Z info: Creating auto-booking for user 1, seat 2, date 2025-06-11
+2025-05-15T04:10:26.916Z info: Auto-booking created successfully with ID 105
+2025-05-15T04:10:26.926Z info: Week 4: Attempting to book day 4 (Thu) on 2025-06-12
+2025-05-15T04:10:26.931Z info: Looking for available seats on 2025-06-12
+2025-05-15T04:10:26.950Z info: Found 8 available seats for date 2025-06-12
+2025-05-15T04:10:26.950Z info: Creating auto-booking for user 1, seat 3, date 2025-06-12
+2025-05-15T04:10:26.962Z info: Auto-booking created successfully with ID 106
+2025-05-15T04:10:26.972Z info: Week 4: Attempting to book day 5 (Fri) on 2025-06-13
+2025-05-15T04:10:26.977Z info: Looking for available seats on 2025-06-13
+2025-05-15T04:10:26.994Z info: Found 7 available seats for date 2025-06-13
+2025-05-15T04:10:26.994Z info: Creating auto-booking for user 1, seat 4, date 2025-06-13
+2025-05-15T04:10:27.006Z info: Auto-booking created successfully with ID 107
+2025-05-15T04:10:27.020Z info: Auto-booking completed for user 1: 15 bookings created, 0 failed
+2025-05-15T04:30:00.806Z info: Running automated desktop session cleanup job
+2025-05-15T04:50:00.439Z info: Running automated desktop session cleanup job
+2025-05-15T05:00:00.481Z info: Running booking cancellation for users who haven't checked in
+2025-05-15T05:00:00.658Z info: Found 3 bookings without check-in by 10:30 AM
+2025-05-15T05:00:00.677Z info: Cancelled booking #22 for user sreeram.s (Seat 1)
+2025-05-15T05:00:00.688Z info: Cancelled booking #42 for user admin (Seat 2)
+2025-05-15T05:00:00.699Z info: Cancelled booking #53 for user sarath.h (Seat 3)
+2025-05-15T05:00:00.700Z info: Successfully cancelled 3 bookings due to no check-in by 10:30 AM
+2025-05-15T05:10:00.238Z info: Running automated desktop session cleanup job
+2025-05-15T05:30:00.048Z info: Running automated desktop session cleanup job
+2025-05-15T05:33:56.787Z info: Checking database structure...
+2025-05-15T05:33:59.568Z info: Database synchronized successfully.
+2025-05-15T05:33:59.581Z info: Roles already exist, skipping seed.
+2025-05-15T05:33:59.589Z info: Users already exist, skipping admin user creation.
+2025-05-15T05:33:59.594Z info: Seats already exist, skipping seat creation.
+2025-05-15T05:33:59.613Z info: All users have valid auto-booking preferences
+2025-05-15T05:33:59.614Z info: Database initialization completed successfully.
+2025-05-15T05:33:59.628Z info: Scheduler initialized successfully
+2025-05-15T05:33:59.637Z info: Server is running on port 9600
+2025-05-15T05:34:09.629Z info: Running initial auto-booking process at startup
+2025-05-15T05:34:09.633Z info: Starting auto-booking process for all users
+2025-05-15T05:34:09.644Z info: Found 1 admin users to exclude from auto-booking
+2025-05-15T05:34:09.651Z info: Found 3 active users to process
+2025-05-15T05:34:09.652Z info: Processing user 2 (sreeram.s)
+2025-05-15T05:34:09.653Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-05-15T05:34:09.656Z info: Checking existing bookings for user 2 from 2025-05-26 to 2025-06-12
+2025-05-15T05:34:09.680Z info: User 2 already has 14 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T05:34:09.683Z info: User 2 has existing booking on 2025-05-26
+2025-05-15T05:34:09.685Z info: User 2 has existing booking on 2025-05-27
+2025-05-15T05:34:09.686Z info: User 2 has existing booking on 2025-05-28
+2025-05-15T05:34:09.687Z info: User 2 has existing booking on 2025-05-29
+2025-05-15T05:34:09.688Z info: User 2 has existing booking on 2025-05-30
+2025-05-15T05:34:09.689Z info: User 2 has existing booking on 2025-06-02
+2025-05-15T05:34:09.692Z info: User 2 has existing booking on 2025-06-03
+2025-05-15T05:34:09.694Z info: User 2 has existing booking on 2025-06-04
+2025-05-15T05:34:09.696Z info: User 2 has existing booking on 2025-06-05
+2025-05-15T05:34:09.699Z info: User 2 has existing booking on 2025-06-06
+2025-05-15T05:34:09.700Z info: User 2 has existing booking on 2025-06-09
+2025-05-15T05:34:09.702Z info: User 2 has existing booking on 2025-06-10
+2025-05-15T05:34:09.706Z info: User 2 has existing booking on 2025-06-11
+2025-05-15T05:34:09.709Z info: User 2 has existing booking on 2025-06-12
+2025-05-15T05:34:09.712Z info: Processing user 5 (anand.vp)
+2025-05-15T05:34:09.713Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-05-15T05:34:09.716Z info: Checking existing bookings for user 5 from 2025-05-26 to 2025-06-12
+2025-05-15T05:34:09.729Z info: User 5 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T05:34:09.732Z info: User 5 has existing booking on 2025-05-26
+2025-05-15T05:34:09.735Z info: User 5 has existing booking on 2025-05-30
+2025-05-15T05:34:09.739Z info: User 5 has existing booking on 2025-06-02
+2025-05-15T05:34:09.742Z info: User 5 has existing booking on 2025-06-06
+2025-05-15T05:34:09.745Z info: User 5 has existing booking on 2025-06-09
+2025-05-15T05:34:09.748Z info: Processing user 4 (sarath.h)
+2025-05-15T05:34:09.752Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-05-15T05:34:09.753Z info: Checking existing bookings for user 4 from 2025-05-26 to 2025-06-12
+2025-05-15T05:34:09.768Z info: User 4 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T05:34:09.780Z info: User 4 has existing booking on 2025-05-29
+2025-05-15T05:34:09.785Z info: User 4 has existing booking on 2025-05-30
+2025-05-15T05:34:09.792Z info: User 4 has existing booking on 2025-06-05
+2025-05-15T05:34:09.797Z info: User 4 has existing booking on 2025-06-06
+2025-05-15T05:34:09.803Z info: User 4 has existing booking on 2025-06-12
+2025-05-15T05:34:09.811Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-15T05:34:09.818Z info: Initial auto-booking process completed successfully
+2025-05-15T05:50:00.866Z info: Running automated desktop session cleanup job
+2025-05-15T06:10:00.223Z info: Running automated desktop session cleanup job
+2025-05-15T06:30:00.208Z info: Running automated desktop session cleanup job
+2025-05-15T06:30:01.118Z info: Cleaned up 1 stale desktop sessions
+2025-05-15T06:51:08.182Z info: Checking database structure...
+2025-05-15T06:51:14.877Z info: Database synchronized successfully.
+2025-05-15T06:51:14.902Z info: Roles already exist, skipping seed.
+2025-05-15T06:51:14.938Z info: Users already exist, skipping admin user creation.
+2025-05-15T06:51:15.008Z info: Seats already exist, skipping seat creation.
+2025-05-15T06:51:15.033Z info: All users have valid auto-booking preferences
+2025-05-15T06:51:15.044Z info: Database initialization completed successfully.
+2025-05-15T06:51:15.086Z info: Scheduler initialized successfully
+2025-05-15T06:51:15.116Z info: Server is running on port 9600
+2025-05-15T06:51:25.103Z info: Running initial auto-booking process at startup
+2025-05-15T06:51:25.106Z info: Starting auto-booking process for all users
+2025-05-15T06:51:25.392Z info: Found 1 admin users to exclude from auto-booking
+2025-05-15T06:51:25.528Z info: Found 3 active users to process
+2025-05-15T06:51:25.529Z info: Processing user 2 (sreeram.s)
+2025-05-15T06:51:25.530Z info: User preferences - defaultWorkDays: [1,2,3,4,5], requiredDaysPerWeek: 5
+2025-05-15T06:51:25.531Z info: Checking existing bookings for user 2 from 2025-05-26 to 2025-06-12
+2025-05-15T06:51:25.678Z info: User 2 already has 14 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T06:51:25.679Z info: User 2 has existing booking on 2025-05-26
+2025-05-15T06:51:25.680Z info: User 2 has existing booking on 2025-05-27
+2025-05-15T06:51:25.680Z info: User 2 has existing booking on 2025-05-28
+2025-05-15T06:51:25.681Z info: User 2 has existing booking on 2025-05-29
+2025-05-15T06:51:25.682Z info: User 2 has existing booking on 2025-05-30
+2025-05-15T06:51:25.683Z info: User 2 has existing booking on 2025-06-02
+2025-05-15T06:51:25.684Z info: User 2 has existing booking on 2025-06-03
+2025-05-15T06:51:25.685Z info: User 2 has existing booking on 2025-06-04
+2025-05-15T06:51:25.686Z info: User 2 has existing booking on 2025-06-05
+2025-05-15T06:51:25.687Z info: User 2 has existing booking on 2025-06-06
+2025-05-15T06:51:25.688Z info: User 2 has existing booking on 2025-06-09
+2025-05-15T06:51:25.688Z info: User 2 has existing booking on 2025-06-10
+2025-05-15T06:51:25.690Z info: User 2 has existing booking on 2025-06-11
+2025-05-15T06:51:25.691Z info: User 2 has existing booking on 2025-06-12
+2025-05-15T06:51:25.696Z info: Processing user 5 (anand.vp)
+2025-05-15T06:51:25.697Z info: User preferences - defaultWorkDays: [1,5], requiredDaysPerWeek: 2
+2025-05-15T06:51:25.699Z info: Checking existing bookings for user 5 from 2025-05-26 to 2025-06-12
+2025-05-15T06:51:25.713Z info: User 5 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T06:51:25.715Z info: User 5 has existing booking on 2025-05-26
+2025-05-15T06:51:25.716Z info: User 5 has existing booking on 2025-05-30
+2025-05-15T06:51:25.718Z info: User 5 has existing booking on 2025-06-02
+2025-05-15T06:51:25.719Z info: User 5 has existing booking on 2025-06-06
+2025-05-15T06:51:25.721Z info: User 5 has existing booking on 2025-06-09
+2025-05-15T06:51:25.722Z info: Processing user 4 (sarath.h)
+2025-05-15T06:51:25.724Z info: User preferences - defaultWorkDays: [4,5], requiredDaysPerWeek: 2
+2025-05-15T06:51:25.726Z info: Checking existing bookings for user 4 from 2025-05-26 to 2025-06-12
+2025-05-15T06:51:25.742Z info: User 4 already has 5 future bookings between 2025-05-26 and 2025-06-12 - skipping
+2025-05-15T06:51:25.743Z info: User 4 has existing booking on 2025-05-29
+2025-05-15T06:51:25.744Z info: User 4 has existing booking on 2025-05-30
+2025-05-15T06:51:25.745Z info: User 4 has existing booking on 2025-06-05
+2025-05-15T06:51:25.745Z info: User 4 has existing booking on 2025-06-06
+2025-05-15T06:51:25.746Z info: User 4 has existing booking on 2025-06-12
+2025-05-15T06:51:25.747Z info: Auto-booking process complete: 0 users updated, 0 failed, 0 with no/invalid preferences
+2025-05-15T06:51:25.748Z info: Initial auto-booking process completed successfully

@@ -170,7 +170,7 @@ const DesktopSessions = () => {
         if (tabValue === 0) {
           fetchSessions();
         }
-      }, 10000); // 10 seconds refresh to catch changes faster
+      }, 10000); // 10 seconds refresh
       setRefreshInterval(interval);
     } else {
       if (refreshInterval) {
