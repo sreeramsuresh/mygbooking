@@ -387,19 +387,25 @@ class ApiClient:
             current_time = int(time.time())
             formatted_time = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
             
+            # Get fresh network information 
+            current_ssid = NetworkMonitor.get_current_ssid()
+            current_ip = NetworkMonitor.get_ip_address()
+            current_mac = NetworkMonitor.get_mac_address()
+            computer_name = NetworkMonitor.get_computer_name()
+            
             if is_connect:
                 payload = {
                     "event_type": "connect",
-                    "ssid": NetworkMonitor.get_current_ssid(),
+                    "ssid": current_ssid,
                     "email": self.user_data['email'],
-                    "ip_address": NetworkMonitor.get_ip_address(),
-                    "mac_address": NetworkMonitor.get_mac_address(),
-                    "computer_name": NetworkMonitor.get_computer_name(),
+                    "ip_address": current_ip,
+                    "mac_address": current_mac,
+                    "computer_name": computer_name,
                     "connection_start_time": current_time,
                     "connection_start_time_formatted": formatted_time
                 }
+                print(f"Attempting to connect with SSID: {current_ssid}, IP: {current_ip}")
                 self.connection_start_time = current_time
-                self.connected = True
             else:
                 # Calculate duration
                 duration = 0
@@ -413,22 +419,47 @@ class ApiClient:
                 
                 payload = {
                     "event_type": "disconnect",
-                    "ssid": NetworkMonitor.get_current_ssid(),
+                    "ssid": current_ssid,
                     "email": self.user_data['email'],
-                    "mac_address": NetworkMonitor.get_mac_address(),
+                    "ip_address": current_ip,
+                    "mac_address": current_mac,
+                    "computer_name": computer_name,
                     "connection_duration": duration,
                     "connection_duration_formatted": duration_formatted
                 }
-                self.connected = False
+                print(f"Disconnecting from {current_ssid} after {duration_formatted}")
             
-            response = self.session.post(f"{API_BASE_URL}/track-connection", json=payload)
-            response_data = response.json()
-            
-            if response.status_code == 200 and response_data.get('success'):
-                return True, response_data['message']
-            else:
-                return False, response_data.get('message', 'Tracking failed')
+            # Set a timeout for the request to avoid hanging
+            try:
+                response = self.session.post(
+                    f"{API_BASE_URL}/track-connection", 
+                    json=payload,
+                    timeout=15  # 15-second timeout
+                )
+                response_data = response.json()
+                
+                if response.status_code == 200 and response_data.get('success'):
+                    # Update connection status based on request type
+                    if is_connect:
+                        self.connected = True
+                        # Reset the heartbeat counter after successful connection
+                        self.last_heartbeat_time = current_time
+                    else:
+                        self.connected = False
+                        self.connection_start_time = None
+                        
+                    return True, response_data['message']
+                else:
+                    error_msg = response_data.get('message', 'Tracking failed') 
+                    print(f"Connection tracking failed: {error_msg}")
+                    return False, error_msg
+                    
+            except requests.exceptions.RequestException as req_err:
+                print(f"Network error during connection tracking: {str(req_err)}")
+                return False, f"Network error: {str(req_err)}"
+                
         except Exception as e:
+            print(f"Critical error in track_connection: {str(e)}")
             return False, f"Tracking error: {str(e)}"
     
     def send_heartbeat(self):
@@ -440,35 +471,48 @@ class ApiClient:
             current_time = int(time.time())
             formatted_time = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
             
+            # Get fresh network information with each heartbeat
+            current_ssid = NetworkMonitor.get_current_ssid()
+            current_ip = NetworkMonitor.get_ip_address()
+            
             payload = {
                 "event_type": "heartbeat",
-                "ssid": NetworkMonitor.get_current_ssid(),
+                "ssid": current_ssid,
                 "email": self.user_data['email'],
-                "ip_address": NetworkMonitor.get_ip_address(),
+                "ip_address": current_ip,
                 "mac_address": NetworkMonitor.get_mac_address(),
                 "computer_name": NetworkMonitor.get_computer_name(),
                 "heartbeat_time": current_time,
                 "heartbeat_time_formatted": formatted_time
             }
             
-            response = self.session.post(f"{API_BASE_URL}/track-connection", json=payload)
-            response_data = response.json()
-            
-            if response.status_code == 200 and response_data.get('success'):
-                self.last_heartbeat_time = current_time
-                print(f"Heartbeat sent successfully at {formatted_time}")
-                return True, response_data['message']
-            else:
-                print(f"Heartbeat failed: {response_data.get('message', 'Unknown error')}")
+            # Set a timeout for the request to avoid hanging
+            try:
+                response = self.session.post(
+                    f"{API_BASE_URL}/track-connection", 
+                    json=payload,
+                    timeout=15  # 15-second timeout
+                )
+                response_data = response.json()
                 
-                # If server cannot find the session, try to reconnect
-                if "No active session found" in response_data.get('message', ''):
-                    print("Session not found on server, attempting to reconnect...")
-                    return False, "Session not found"
+                if response.status_code == 200 and response_data.get('success'):
+                    self.last_heartbeat_time = current_time
+                    print(f"Heartbeat sent successfully at {formatted_time} on network {current_ssid}")
+                    return True, response_data['message']
+                else:
+                    print(f"Heartbeat failed: {response_data.get('message', 'Unknown error')}")
+                    
+                    # Return failure for any error message from server
+                    return False, response_data.get('message', 'Heartbeat failed')
+                    
+            except requests.exceptions.RequestException as req_err:
+                print(f"Network error during heartbeat: {str(req_err)}")
+                return False, f"Network error: {str(req_err)}"
                 
-                return False, response_data.get('message', 'Heartbeat failed')
         except Exception as e:
-            return False, f"Heartbeat error: {str(e)}"
+            print(f"Critical error in send_heartbeat: {str(e)}")
+            # If there's an exception during heartbeat, signal reconnection needed
+            return False, f"Critical heartbeat error: {str(e)}"
 
 
 class ConfigManager:
@@ -596,7 +640,6 @@ class OfficeAgent:
             print(f"Current network: {current_ssid}")
             
             # For Windows Subsystem for Linux (WSL) or when can't detect network properly
-            # Just assume we're connected to make the agent work
             if sys.platform == 'win32' or 'linux' in sys.platform.lower():
                 # If we previously weren't connected, try to connect now
                 if self.previous_ssid == "Unknown" and not self.api_client.connected:
@@ -631,17 +674,25 @@ class OfficeAgent:
                 
                 # Handle SSID changes (when connected to a different network)
                 elif current_ssid != "Unknown" and self.previous_ssid != "Unknown" and current_ssid != self.previous_ssid:
-                    # First disconnect from previous network
-                    success, message = self.api_client.track_connection(is_connect=False)
-                    if success:
-                        print(f"Disconnected from {self.previous_ssid}: {message}")
-                    else:
-                        print(f"Disconnection tracking failed: {message}")
+                    print(f"SSID change detected: {self.previous_ssid} -> {current_ssid}")
+                    
+                    # Only try to disconnect if we're actually connected
+                    if self.api_client.connected:
+                        # First disconnect from previous network
+                        success, message = self.api_client.track_connection(is_connect=False)
+                        if success:
+                            print(f"Disconnected from {self.previous_ssid}: {message}")
+                        else:
+                            print(f"Disconnection tracking failed: {message}")
+                        
+                        # Brief pause to ensure server processes the disconnect event
+                        time.sleep(1)
                     
                     # Then connect to new network
                     success, message = self.api_client.track_connection(is_connect=True)
                     if success:
                         print(f"Connected to {current_ssid}: {message}")
+                        self.api_client.connected = True  # Explicitly set connected flag
                     else:
                         print(f"Connection tracking failed: {message}")
             
@@ -690,16 +741,64 @@ class OfficeAgent:
                 # Check network
                 self.check_network()
                 
-                # Send heartbeat every 2 minutes (4 cycles)
+                # Send heartbeat every 1 minute (2 cycles) - more frequent to prevent timeouts
                 heartbeat_counter += 1
-                if heartbeat_counter >= 4:
-                    if self.api_client.connected:
-                        success, message = self.api_client.send_heartbeat()
-                        if not success and message == "Session not found":
-                            # Force reconnect
-                            self.api_client.track_connection(is_connect=True)
-                    
+                if heartbeat_counter >= 2:
                     heartbeat_counter = 0
+                    
+                    # Always check current connection state
+                    current_ssid = NetworkMonitor.get_current_ssid()
+                    
+                    # Debug connection state
+                    print(f"Heartbeat check: connected={self.api_client.connected}, current_ssid={current_ssid}, previous_ssid={self.previous_ssid}")
+                    
+                    # Force heartbeat even if we think we're not connected
+                    try:
+                        # Check if SSID changed
+                        if current_ssid != self.previous_ssid and current_ssid != "Unknown":
+                            print(f"SSID changed during heartbeat check: {self.previous_ssid} -> {current_ssid}")
+                            # Update previous SSID
+                            self.previous_ssid = current_ssid
+                            
+                            # Force reconnection with new SSID
+                            print("Forcing reconnection due to SSID change")
+                            reconnect_success, reconnect_message = self.api_client.track_connection(is_connect=True)
+                            if reconnect_success:
+                                self.api_client.connected = True
+                                print(f"Successfully reconnected after SSID change: {reconnect_message}")
+                            else:
+                                print(f"Failed to reconnect after SSID change: {reconnect_message}")
+                        elif self.api_client.connected:
+                            # Normal heartbeat
+                            print(f"Sending heartbeat at {time.strftime('%H:%M:%S')}")
+                            success, message = self.api_client.send_heartbeat()
+                            if not success:
+                                # If server reports session not found or any other error during heartbeat,
+                                # force a reconnection to ensure the session is tracked properly
+                                print(f"Heartbeat failed with message: {message}. Attempting to reconnect...")
+                                # Then reconnect
+                                reconnect_success, reconnect_message = self.api_client.track_connection(is_connect=True)
+                                if reconnect_success:
+                                    self.api_client.connected = True
+                                    print(f"Successfully reconnected after heartbeat failure: {reconnect_message}")
+                                else:
+                                    print(f"Failed to reconnect after heartbeat failure: {reconnect_message}")
+                        else:
+                            # Not connected, try to connect
+                            print("Not connected during heartbeat check, attempting to connect...")
+                            connect_success, connect_message = self.api_client.track_connection(is_connect=True)
+                            if connect_success:
+                                self.api_client.connected = True
+                                print(f"Successfully connected during heartbeat check: {connect_message}")
+                            else:
+                                print(f"Failed to connect during heartbeat check: {connect_message}")
+                    except Exception as e:
+                        print(f"Critical error during heartbeat check: {str(e)}")
+                        # Try to reconnect on error
+                        try:
+                            self.api_client.track_connection(is_connect=True)
+                        except:
+                            pass
                 
         except KeyboardInterrupt:
             print("\nStopping Office Agent via KeyboardInterrupt...")

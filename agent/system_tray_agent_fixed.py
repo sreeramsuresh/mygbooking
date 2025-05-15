@@ -306,18 +306,64 @@ class SystemTrayAgent(QtWidgets.QSystemTrayIcon):
                     # Check network status
                     self.agent.check_network()
                     
-                    # Send heartbeat every 2 minutes (4 cycles)
+                    # Send heartbeat every 1 minute (2 cycles) - more frequent to prevent timeouts
                     heartbeat_counter += 1
-                    if heartbeat_counter >= 4:
-                        if self.agent.api_client.connected:
-                            success, message = self.agent.api_client.send_heartbeat()
-                            if not success and message == "Session not found":
-                                # Force reconnect
-                                self.agent.api_client.track_connection(is_connect=True)
-                                log_to_file("Forced reconnection due to session not found")
-                                self.status_signal.emit("Status: Reconnected")
-                        
+                    if heartbeat_counter >= 2:
                         heartbeat_counter = 0
+                        
+                        # Always check current connection state  
+                        current_ssid = NetworkMonitor.get_current_ssid()
+                        
+                        # Debug connection state
+                        log_to_file(f"Heartbeat check: connected={self.agent.api_client.connected}, current_ssid={current_ssid}, previous_ssid={self.agent.previous_ssid}")
+                        
+                        try:
+                            # Check if SSID changed
+                            if current_ssid != self.agent.previous_ssid and current_ssid != "Unknown":
+                                log_to_file(f"SSID changed during heartbeat check: {self.agent.previous_ssid} -> {current_ssid}")
+                                # Update previous SSID
+                                self.agent.previous_ssid = current_ssid
+                                
+                                # Force reconnection with new SSID
+                                log_to_file("Forcing reconnection due to SSID change")
+                                reconnect_success, reconnect_message = self.agent.api_client.track_connection(is_connect=True)
+                                if reconnect_success:
+                                    self.agent.api_client.connected = True
+                                    log_to_file(f"Successfully reconnected after SSID change: {reconnect_message}")
+                                    self.status_signal.emit(f"Status: Connected to {current_ssid}")
+                                else:
+                                    log_to_file(f"Failed to reconnect after SSID change: {reconnect_message}")
+                            elif self.agent.api_client.connected:
+                                # Normal heartbeat
+                                log_to_file(f"Sending heartbeat at {time.strftime('%H:%M:%S')}")
+                                success, message = self.agent.api_client.send_heartbeat()
+                                if not success:
+                                    # If heartbeat fails, force a reconnection
+                                    log_to_file(f"Heartbeat failed with message: {message}. Forcing reconnection...")
+                                    reconnect_success, reconnect_message = self.agent.api_client.track_connection(is_connect=True)
+                                    if reconnect_success:
+                                        self.agent.api_client.connected = True
+                                        log_to_file(f"Successfully reconnected after heartbeat failure: {reconnect_message}")
+                                        self.status_signal.emit("Status: Reconnected")
+                                    else:
+                                        log_to_file(f"Failed to reconnect after heartbeat failure: {reconnect_message}")
+                            else:
+                                # Not connected, try to connect
+                                log_to_file("Not connected during heartbeat check, attempting to connect...")
+                                connect_success, connect_message = self.agent.api_client.track_connection(is_connect=True)
+                                if connect_success:
+                                    self.agent.api_client.connected = True
+                                    log_to_file(f"Successfully connected during heartbeat check: {connect_message}")
+                                    self.status_signal.emit("Status: Connected")
+                                else:
+                                    log_to_file(f"Failed to connect during heartbeat check: {connect_message}")
+                        except Exception as e:
+                            log_to_file(f"Critical error during heartbeat check: {str(e)}")
+                            # Try to reconnect on error
+                            try:
+                                self.agent.api_client.track_connection(is_connect=True)
+                            except:
+                                pass
                 except Exception as inner_e:
                     log_to_file(f"Error in agent loop iteration: {str(inner_e)}")
                     # Continue running despite errors in a single iteration
